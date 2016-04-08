@@ -9,176 +9,177 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         componentCls: 'jarvus-aggregrid',
 
-        data: {
-            students: [
-                { fullName: 'Jessica Alfred' },
-                { fullName: 'Christian Bumble' },
-                { fullName: 'David Calloway' },
-                { fullName: 'William Christianson' },
-                { fullName: 'Christian Davids' },
-                { fullName: 'Johnathan Fazio' },
-                { fullName: 'Tyler Fellows' },
-                { fullName: 'Jessica Alfred' },
-                { fullName: 'Christian Bumble' },
-                { fullName: 'David Calloway' },
-                { fullName: 'William Christianson' },
-                { fullName: 'Christian Davids' },
-                { fullName: 'Johnathan Fazio' },
-                { fullName: 'Tyler Fellows' },
-                { fullName: 'Jessica Alfred' },
-                { fullName: 'Christian Bumble' },
-                { fullName: 'David Calloway' },
-                { fullName: 'William Christianson' },
-                { fullName: 'Christian Davids' },
-                { fullName: 'Johnathan Fazio' },
-                { fullName: 'Tyler Fellows' },
-                { fullName: 'Nafis Guthery' }
-            ],
-            rows: [
-                {
-                    title: 'Performance Task 1',
-                    students: [
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' }
-                    ],
-                    rows: [
-                        {
-                            title: 'Performance Task 1, Subtask 1',
-                            students: [
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' }
-                            ]
-                        },
-                        {
-                            title: 'Performance Task 1, Subtask 2',
-                            students: [
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' }
-                            ]
-                        },
-                        {
-                            title: 'Performance Task 1, Subtask 3',
-                            students: [
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' },
-                                { text: 'Foole' },
-                                { text: 'Foo' },
-                                { text: 'Fooianson' },
-                                { text: 'Foods' },
-                                { text: 'Fooo' },
-                                { text: 'Foo' },
-                                { text: 'Foo' }
-                            ]
-                        },
-                    ]
-                },
-                {
-                    title: 'Performance Task 2',
-                    students: [
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' },
-                        { text: 'Foole' },
-                        { text: 'Foo' },
-                        { text: 'Fooianson' },
-                        { text: 'Foods' },
-                        { text: 'Fooo' },
-                        { text: 'Foo' },
-                        { text: 'Foo' }
-                    ],
-                }
-            ]
-        },
+    //     data: {
+    //         columns: [
+    //             { fullName: 'Jessica Alfred' },
+    //             { fullName: 'Christian Bumble' },
+    //             { fullName: 'David Calloway' },
+    //             { fullName: 'William Christianson' },
+    //             { fullName: 'Christian Davids' },
+    //             { fullName: 'Johnathan Fazio' },
+    //             { fullName: 'Tyler Fellows' },
+    //             { fullName: 'Jessica Alfred' },
+    //             { fullName: 'Christian Bumble' },
+    //             { fullName: 'David Calloway' },
+    //             { fullName: 'William Christianson' },
+    //             { fullName: 'Christian Davids' },
+    //             { fullName: 'Johnathan Fazio' },
+    //             { fullName: 'Tyler Fellows' },
+    //             { fullName: 'Jessica Alfred' },
+    //             { fullName: 'Christian Bumble' },
+    //             { fullName: 'David Calloway' },
+    //             { fullName: 'William Christianson' },
+    //             { fullName: 'Christian Davids' },
+    //             { fullName: 'Johnathan Fazio' },
+    //             { fullName: 'Tyler Fellows' },
+    //             { fullName: 'Nafis Guthery' }
+    //         ],
+    //         rows: [
+    //             {
+    //                 title: 'Performance Task 1',
+    //                 students: [
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' }
+    //                 ],
+    //                 rows: [
+    //                     {
+    //                         title: 'Performance Task 1, Subtask 1',
+    //                         students: [
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' }
+    //                         ]
+    //                     },
+    //                     {
+    //                         title: 'Performance Task 1, Subtask 2',
+    //                         students: [
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' }
+    //                         ]
+    //                     },
+    //                     {
+    //                         title: 'Performance Task 1, Subtask 3',
+    //                         students: [
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foole' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Fooianson' },
+    //                             { text: 'Foods' },
+    //                             { text: 'Fooo' },
+    //                             { text: 'Foo' },
+    //                             { text: 'Foo' }
+    //                         ]
+    //                     },
+    //                 ]
+    //             },
+    //             {
+    //                 title: 'Performance Task 2',
+    //                 students: [
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foole' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Fooianson' },
+    //                     { text: 'Foods' },
+    //                     { text: 'Fooo' },
+    //                     { text: 'Foo' },
+    //                     { text: 'Foo' }
+    //                 ],
+    //             }
+    //         ]
+    //     },
     },
 
 
     tpl: [
-        '{% var studentsCount = values.students.length %}',
+        '{% var columnsCount = values.columns.length %}',
+        '{% var rowsCount = values.rows.length %}',
 
         '<div class="jarvus-aggregrid-rowheaders-ct">',
             '<table class="jarvus-aggregrid-rowheaders-table">',
@@ -229,7 +230,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 '<table class="jarvus-aggregrid-data-table">',
                     '<thead>',
                         '<tr>',
-                            '<tpl for="students">',
+                            '<tpl for="columns">',
                                 '<th class="jarvus-aggregrid-colheader">',
                                     '<div class="jarvus-aggregrid-header-clip">',
                                         '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
@@ -244,14 +245,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '<tbody>',
                         '<tpl for="rows">',
                             '<tr class="jarvus-aggregrid-row">',
-                                '<tpl for="students">',
+                                '<tpl for="columns">',
                                     '<td class="jarvus-aggregrid-cell">{text}</td>',
                                 '</tpl>',
                             '</tr>',
 
                             // expander infrastructure
                             '<tr class="jarvus-aggregrid-expander">',
-                                '<td class="jarvus-aggregrid-expander-cell" colspan="{[ studentsCount ]}">',
+                                '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
                                     '<div class="jarvus-aggregrid-expander-ct">',
                                         '<table class="jarvus-aggregrid-expander-table">',
                                             '<tbody>',
@@ -259,7 +260,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                                                 '<tpl for="rows">',
                                                     '<tr class="jarvus-aggregrid-subrow">',
-                                                        '<tpl for="students">',
+                                                        '<tpl for="columns">',
                                                             '<td class="jarvus-aggregrid-cell">{text}</td>',
                                                         '</tpl>',
                                                     '</tr>',
@@ -344,5 +345,33 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     doRefresh: function() {
         console.info('doRefresh');
+
+        this.setData(this.buildTplData());
+    },
+
+    buildTplData: function() {
+        var me = this,
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+
+            rowsStore = me.getRowsStore(),
+            rowsCount = rowsStore.getCount(),
+
+            i,
+            data = {},
+            columns = data.columns = [],
+            rows = data.rows = [];
+
+        for (i = 0; i < columnsCount; i++) {
+            columns.push(columnsStore.getAt(i).getData());
+        }
+
+        for (i = 0; i < rowsCount; i++) {
+            rows.push(Ext.apply({
+                columns: columns,
+            }, rowsStore.getAt(i).getData()));
+        }
+
+        return data;
     }
 });
