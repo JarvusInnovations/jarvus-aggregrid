@@ -324,7 +324,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // component methods
-    refresh: function() {
+    refresh: Ext.Function.createBuffered(function() {
         var me = this,
             columnsStore = me.getColumnsStore(),
             rowsStore = me.getRowsStore();
@@ -337,5 +337,5 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         console.info('refresh');
-    }
+    }, 10)
 });
