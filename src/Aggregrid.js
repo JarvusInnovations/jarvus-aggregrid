@@ -10,6 +10,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         columnHeaderField: 'title',
         columnHeaderTpl: false,
 
+        rowHeaderField: 'title',
+        rowHeaderTpl: false,
+
         componentCls: 'jarvus-aggregrid',
 
     //     data: {
@@ -196,7 +199,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '<tpl for="rows">',
                         '<tr class="jarvus-aggregrid-row">',
                             '<th class="jarvus-aggregrid-rowheader">',
-                                '<div class="jarvus-aggregrid-header-text">{title}</div>',,
+                                '<div class="jarvus-aggregrid-header-text">',
+                                    '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
+                                '</div>',
                             '</th>',
                         '</tr>',
 
@@ -208,11 +213,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                         '<table class="jarvus-aggregrid-expander-table">',
                                             '<tbody>',
                                             //
-
                                                 '<tpl for="rows">',
                                                     '<tr class="jarvus-aggregrid-subrow">',
                                                         '<th class="jarvus-aggregrid-rowheader">',
-                                                            '<span class="jarvus-aggregrid-header-text">{title}</span>',
+                                                            '<span class="jarvus-aggregrid-header-text">',
+                                                                '{% ;(values.rowHeaderTpl||parent.rowHeaderTpl).applyOut(values, out, parent) %}',
+                                                            '</span>',
                                                         '</th>',
                                                     '</tr>',
                                                 '</tpl>',
@@ -240,7 +246,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                     '<div class="jarvus-aggregrid-header-clip">',
                                         '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
                                             '<span class="jarvus-aggregrid-header-text">',
-                                                '{%parent.columnHeaderTpl.applyOut(values, out, parent)%}',
+                                                 '{% values.columnHeaderTpl.applyOut(values, out, parent) %}',
                                             '</span>',
                                         '</a>',
                                     '</div>',
@@ -347,6 +353,20 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return columnHeaderTpl;
     },
 
+    applyRowHeaderTpl: function(rowHeaderTpl) {
+        var me = this;
+
+        if (!rowHeaderTpl) {
+            rowHeaderTpl = new Ext.XTemplate(
+                '{[typeof values === "string" ? values : values["' + me.getRowHeaderField() + '"]]}'
+            );
+        } else if (!rowHeaderTpl.isTemplate) {
+            rowHeaderTpl = new Ext.XTemplate(rowHeaderTpl);
+        }
+
+        return rowHeaderTpl;
+    },
+
 
     // component methods
     refresh: Ext.Function.createBuffered(function() {
@@ -376,23 +396,26 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
+            columnHeaderTpl = me.getColumnHeaderTpl(),
 
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
+            rowHeaderTpl = me.getRowHeaderTpl(),
 
             i,
-            data = {
-                columnHeaderTpl: me.getColumnHeaderTpl()
-            },
+            data = {},
             columns = data.columns = [],
             rows = data.rows = [];
 
         for (i = 0; i < columnsCount; i++) {
-            columns.push(columnsStore.getAt(i).getData());
+            columns.push(Ext.apply({
+                columnHeaderTpl: columnHeaderTpl
+            }, columnsStore.getAt(i).getData()));
         }
 
         for (i = 0; i < rowsCount; i++) {
             rows.push(Ext.apply({
+                rowHeaderTpl: rowHeaderTpl,
                 columns: columns
             }, rowsStore.getAt(i).getData()));
         }
