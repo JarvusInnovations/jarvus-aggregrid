@@ -279,12 +279,63 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     ],
 
 
+    // component lifecycle
+    afterRender: function() {
+        this.callParent(arguments);
+
+        this.refresh();
+    },
+
+
     // config handlers
     applyColumnsStore: function(store) {
         return Ext.StoreMgr.lookup(store);
     },
 
+    updateColumnsStore: function(store, oldStore) {
+        var me = this;
+
+        if (oldStore) {
+            oldStore.un('datachanged', 'refresh', me);
+        }
+
+        if (store) {
+            me.refresh();
+            store.on('datachanged', 'refresh', me);
+        }
+    },
+
     applyRowsStore: function(store) {
         return Ext.StoreMgr.lookup(store);
+    },
+
+    updateRowsStore: function(store, oldStore) {
+        var me = this;
+
+        if (oldStore) {
+            oldStore.un('datachanged', 'refresh', me);
+        }
+
+        if (store) {
+            me.refresh();
+            store.on('datachanged', 'refresh', me);
+        }
+    },
+
+
+    // component methods
+    refresh: function() {
+        var me = this,
+            columnsStore = me.getColumnsStore(),
+            rowsStore = me.getRowsStore();
+
+        if (
+            !columnsStore || !rowsStore
+            || !columnsStore.isLoaded() || !rowsStore.isLoaded()
+        ) {
+            return;
+        }
+
+        console.info('refresh');
     }
 });
