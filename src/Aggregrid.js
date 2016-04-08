@@ -7,6 +7,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         columnsStore: null,
         rowsStore: null,
 
+        columnHeaderField: 'title',
+        columnHeaderTpl: false,
+
         componentCls: 'jarvus-aggregrid',
 
     //     data: {
@@ -236,7 +239,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                 '<th class="jarvus-aggregrid-colheader">',
                                     '<div class="jarvus-aggregrid-header-clip">',
                                         '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
-                                            '<span class="jarvus-aggregrid-header-text">{fullName}</span>',
+                                            '<span class="jarvus-aggregrid-header-text">',
+                                                '{%parent.columnHeaderTpl.applyOut(values, out, parent)%}',
+                                            '</span>',
                                         '</a>',
                                     '</div>',
                                 '</th>',
@@ -328,6 +333,20 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
+    applyColumnHeaderTpl: function(columnHeaderTpl) {
+        var me = this;
+
+        if (!columnHeaderTpl) {
+            columnHeaderTpl = new Ext.XTemplate(
+                '{[typeof values === "string" ? values : values["' + me.getColumnHeaderField() + '"]]}'
+            );
+        } else if (!columnHeaderTpl.isTemplate) {
+            columnHeaderTpl = new Ext.XTemplate(columnHeaderTpl);
+        }
+
+        return columnHeaderTpl;
+    },
+
 
     // component methods
     refresh: Ext.Function.createBuffered(function() {
@@ -362,7 +381,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowsCount = rowsStore.getCount(),
 
             i,
-            data = {},
+            data = {
+                columnHeaderTpl: me.getColumnHeaderTpl()
+            },
             columns = data.columns = [],
             rows = data.rows = [];
 
