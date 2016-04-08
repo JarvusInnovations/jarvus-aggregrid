@@ -337,5 +337,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         console.info('refresh');
-    }, 10)
+
+        me.fireEventedAction('refresh', [me], 'doRefresh', me);
+    }, 10),
+
+    doRefresh: function() {
+        console.info('doRefresh');
+    }
 });
