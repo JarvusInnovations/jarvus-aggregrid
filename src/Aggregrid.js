@@ -198,27 +198,29 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                         '</tr>',
 
                         // expander infrastructure
-                        '<tr class="jarvus-aggregrid-expander">',
-                            '<td class="jarvus-aggregrid-expander-cell">',
-                                '<div class="jarvus-aggregrid-expander-ct">',
-                                    '<table class="jarvus-aggregrid-expander-table">',
-                                        '<tbody>',
-                                        //
+                        '<tpl if="values.rows && values.rows.length">',
+                            '<tr class="jarvus-aggregrid-expander">',
+                                '<td class="jarvus-aggregrid-expander-cell">',
+                                    '<div class="jarvus-aggregrid-expander-ct">',
+                                        '<table class="jarvus-aggregrid-expander-table">',
+                                            '<tbody>',
+                                            //
 
-                                            '<tpl for="rows">',
-                                                '<tr class="jarvus-aggregrid-subrow">',
-                                                    '<th class="jarvus-aggregrid-rowheader">',
-                                                        '<span class="jarvus-aggregrid-header-text">{title}</span>',
-                                                    '</th>',
-                                                '</tr>',
-                                            '</tpl>',
+                                                '<tpl for="rows">',
+                                                    '<tr class="jarvus-aggregrid-subrow">',
+                                                        '<th class="jarvus-aggregrid-rowheader">',
+                                                            '<span class="jarvus-aggregrid-header-text">{title}</span>',
+                                                        '</th>',
+                                                    '</tr>',
+                                                '</tpl>',
 
-                                        //
-                                        '</tbody>',
-                                    '</table>',
-                                '</div>',
-                            '</td>',
-                        '</tr>',
+                                            //
+                                            '</tbody>',
+                                        '</table>',
+                                    '</div>',
+                                '</td>',
+                            '</tr>',
+                        '</tpl>',
                         //
                     '</tpl>',
                 '</tbody>',
@@ -251,27 +253,29 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '</tr>',
 
                             // expander infrastructure
-                            '<tr class="jarvus-aggregrid-expander">',
-                                '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
-                                    '<div class="jarvus-aggregrid-expander-ct">',
-                                        '<table class="jarvus-aggregrid-expander-table">',
-                                            '<tbody>',
-                                            //
+                            '<tpl if="values.rows && values.rows.length">',
+                                '<tr class="jarvus-aggregrid-expander">',
+                                    '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
+                                        '<div class="jarvus-aggregrid-expander-ct">',
+                                            '<table class="jarvus-aggregrid-expander-table">',
+                                                '<tbody>',
+                                                //
 
-                                                '<tpl for="rows">',
-                                                    '<tr class="jarvus-aggregrid-subrow">',
-                                                        '<tpl for="columns">',
-                                                            '<td class="jarvus-aggregrid-cell">{text}</td>',
-                                                        '</tpl>',
-                                                    '</tr>',
-                                                '</tpl>',
+                                                    '<tpl for="rows">',
+                                                        '<tr class="jarvus-aggregrid-subrow">',
+                                                            '<tpl for="columns">',
+                                                                '<td class="jarvus-aggregrid-cell">{text}</td>',
+                                                            '</tpl>',
+                                                        '</tr>',
+                                                    '</tpl>',
 
-                                            //
-                                            '</tbody>',
-                                        '</table>',
-                                    '</div>',
-                                '</td>',
-                            '</tr>',
+                                                //
+                                                '</tbody>',
+                                            '</table>',
+                                        '</div>',
+                                    '</td>',
+                                '</tr>',
+                            '</tpl>',
                             //
                         '</tpl>',
                     '</tbody>',
@@ -368,7 +372,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         for (i = 0; i < rowsCount; i++) {
             rows.push(Ext.apply({
-                columns: columns,
+                columns: columns
             }, rowsStore.getAt(i).getData()));
         }
 
