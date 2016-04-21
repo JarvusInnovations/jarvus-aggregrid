@@ -1,4 +1,3 @@
-/* jshint undef: true, unused: true, browser: true, quotmark: single, curly: true *//*global Ext*/
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
 
