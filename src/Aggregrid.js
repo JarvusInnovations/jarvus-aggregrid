@@ -1,16 +1,19 @@
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
 
-
+    // TODO: reorder configs and update/apply functions
     config: {
         columnsStore: null,
         rowsStore: null,
+        dataStore: null,
 
         columnHeaderField: 'title',
         columnHeaderTpl: false,
+        columnMapper: 'column_id',
 
         rowHeaderField: 'title',
         rowHeaderTpl: false,
+        rowMapper: 'row_id',
 
         componentCls: 'jarvus-aggregrid',
 
@@ -338,6 +341,28 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
+    applyDataStore: function(store) {
+        return Ext.StoreMgr.lookup(store);
+    },
+
+    updateDataStore: function(store, oldStore) {
+        var me = this;
+
+        if (oldStore) {
+            oldStore.un({
+                scope: me,
+                load: 'onDataStoreLoad'
+            });
+        }
+
+        if (store) {
+            store.on({
+                scope: me,
+                load: 'onDataStoreLoad'
+            });
+        }
+    },
+
     applyColumnHeaderTpl: function(columnHeaderTpl) {
         var me = this;
 
@@ -366,6 +391,35 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return rowHeaderTpl;
     },
 
+    applyColumnMapper: function(columnMapper) {
+        if (!Ext.isString(columnMapper)) {
+            return columnMapper;
+        }
+
+        return function(dataRecord, columnsStore) {
+            return columnsStore.getById(dataRecord.get(columnMapper));
+        };
+    },
+
+    applyRowMapper: function(rowMapper) {
+        if (!Ext.isString(rowMapper)) {
+            return rowMapper;
+        }
+
+        return function(dataRecord, rowsStore) {
+            return rowsStore.getById(dataRecord.get(rowMapper));
+        };
+    },
+
+
+    // event handlers
+    onDataStoreLoad: function() {
+        // call aggregate if initial refresh has already populated tpl data
+        if (this.getData()) {
+            this.aggregate();
+        }
+    },
+
 
     // component methods
     refresh: Ext.Function.createBuffered(function() {
@@ -385,10 +439,89 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.fireEventedAction('refresh', [me], 'doRefresh', me);
     }, 10),
 
+    /**
+     * @private
+     * Render the main scaffolding of the aggregrid by columns and rows
+     */
     doRefresh: function() {
+        var me = this,
+            dataStore = me.getDataStore();
+
         console.info('doRefresh');
 
-        this.setData(this.buildTplData());
+        me.setData(me.buildTplData());
+
+        if (!me.aggregateGroups && dataStore && dataStore.isLoaded()) {
+            me.aggregate();
+        }
+    },
+
+    /**
+     * Triggers a complete rebuild of aggregateGroups structure
+     */
+    aggregate: function() {
+        var me = this,
+            store = me.getDataStore();
+
+        if (!store || !store.isLoaded()) {
+            return;
+        }
+
+        console.info('aggregate');
+
+        me.fireEventedAction('aggregate', [me], 'doAggregate', me);
+    },
+
+    /**
+     * @private
+     * Generate the full aggregateGroups structure and flush to DOM
+     */
+    doAggregate: function() {
+        console.info('doAggregate');
+
+        var me = this,
+            rowsStore = me.getRowsStore(),
+            rowMapper = me.getRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+            dataStore = me.getDataStore(),
+
+            dataCount = dataStore.getCount(),
+            dataIndex = 0, dataRecord,
+            row, rowId, column, columnId,
+            aggregateGroups = {};
+
+        for (; dataIndex < dataCount; dataIndex++) {
+            dataRecord = dataStore.getAt(dataIndex);
+            row = rowMapper(dataRecord, rowsStore);
+            column = columnMapper(dataRecord, columnsStore);
+
+            if (!row) {
+                Ext.Logger.warn('Data record ' + dataRecord.getId() + ' not matched to row');
+                continue;
+            }
+
+            if (!column) {
+                Ext.Logger.warn('Data record ' + dataRecord.getId() + ' not matched to column');
+                continue;
+            }
+
+            rowId = row.getId();
+            columnId = column.getId();
+
+            if (!(rowId in aggregateGroups)) {
+                aggregateGroups[rowId] = {};
+            }
+
+            if (!(columnId in aggregateGroups[rowId])) {
+                aggregateGroups[rowId][columnId] = [];
+            }
+
+            aggregateGroups[rowId][columnId].push(dataRecord);
+        }
+
+        me.aggregateGroups = aggregateGroups;
+        console.log('built aggregateGroups', aggregateGroups);
     },
 
     buildTplData: function() {
