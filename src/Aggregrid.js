@@ -15,7 +15,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         rowHeaderTpl: false,
         rowMapper: 'row_id',
 
-        componentCls: 'jarvus-aggregrid',
+        componentCls: 'jarvus-aggregrid'
 
     //     data: {
     //         columns: [
@@ -181,7 +181,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     //                 ],
     //             }
     //         ]
-    //     },
+    //     }
     },
 
 
