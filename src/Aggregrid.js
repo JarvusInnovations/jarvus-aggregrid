@@ -1,9 +1,7 @@
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
 
-    // TODO: reorder configs and update/apply functions
-    // TODO: document events
-    // TODO: write tests for adding/removing data records
+
     config: {
         columnsStore: null,
         rowsStore: null,
