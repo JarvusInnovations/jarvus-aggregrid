@@ -2,6 +2,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
 
     // TODO: reorder configs and update/apply functions
+    // TODO: document events
+    // TODO: write tests for adding/removing data records
     config: {
         columnsStore: null,
         rowsStore: null,
@@ -180,20 +182,21 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     updateDataStore: function(store, oldStore) {
-        var me = this;
+        var me = this,
+            listeners = {
+                scope: me,
+                load: 'onDataStoreLoad',
+                add: 'onDataStoreAdd',
+                remove: 'onDataStoreRemove',
+                update: 'onDataStoreUpdate'
+            };
 
         if (oldStore) {
-            oldStore.un({
-                scope: me,
-                load: 'onDataStoreLoad'
-            });
+            oldStore.un(listeners);
         }
 
         if (store) {
-            store.on({
-                scope: me,
-                load: 'onDataStoreLoad'
-            });
+            store.on(listeners);
         }
     },
 
@@ -252,6 +255,115 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         if (this.getData()) {
             this.aggregate();
         }
+    },
+
+    onDataStoreAdd: function(dataStore, records) {
+        var me = this,
+            recordsMetadata = me.recordsMetadata,
+            aggregateGroups = me.aggregateGroups,
+            rowsStore = me.getRowsStore(),
+            rowMapper = me.getRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+
+            recordsLength = records.length,
+            i = 0, record, recordId, recordMetadata,
+            row, column, rowId, columnId, group;
+
+        for (; i < recordsLength; i++) {
+            record = records[i];
+            recordId = record.getId();
+
+            // get target row and column for this record
+            row = rowMapper(record, rowsStore);
+            column = columnMapper(record, columnsStore);
+
+            if (!row || !column) {
+                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+                return;
+            }
+
+            // create metadata container for record indexed by its id
+            recordMetadata = recordsMetadata[recordId] = {
+                record: record,
+                row: row,
+                column: column
+            };
+
+            // push record to records array for group at [rowId][columnId]
+            rowId = row.getId();
+            columnId = column.getId();
+
+            group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
+            group = group[columnId] || (group[columnId] = { records: [] });
+
+            recordMetadata.group = group;
+            group.records.push(recordMetadata);
+
+            me.fireEvent('aggregatechange', me, 'add', recordMetadata);
+        }
+    },
+
+    onDataStoreRemove: function(store, records) {
+        var me = this,
+            recordsMetadata = me.recordsMetadata,
+            recordsLength = records.length,
+            i = 0, record, recordId, recordMetadata;
+
+        for (; i < recordsLength; i++) {
+            record = records[i];
+            recordId = record.getId();
+            recordMetadata = recordsMetadata[recordId];
+
+            // remove from group
+            Ext.Array.remove(recordMetadata.group.records, recordMetadata);
+
+            // remove metadata
+            delete recordsMetadata[recordId];
+
+            me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
+        }
+    },
+
+    onDataStoreUpdate: function(store, record, operation) {
+        var me = this,
+            aggregateGroups = me.aggregateGroups,
+            rowsStore = me.getRowsStore(),
+            rowMapper = me.getRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+
+            recordMetadata = me.recordsMetadata[record.getId()],
+            previousGroup = recordMetadata.group,
+            row, column, rowId, columnId, group;
+
+        // get updated target row and column for this record
+        row = rowMapper(record, rowsStore);
+        column = columnMapper(record, columnsStore);
+
+        if (!row || !column) {
+            Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+            return;
+        }
+
+        // check if record needs to be moved to a new group
+        if (row === recordMetadata.row && column === recordMetadata.column) {
+            return;
+        }
+
+        // get new group
+        rowId = row.getId();
+        columnId = column.getId();
+        group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
+        group = group[columnId] || (group[columnId] = { records: [] });
+
+        // move record to new group
+        Ext.Array.remove(previousGroup.records, recordMetadata);
+        recordMetadata.previousGroup = previousGroup;
+        recordMetadata.group = group;
+        group.records.push(recordMetadata);
+
+        me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
     },
 
 
@@ -321,31 +433,47 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             dataStore = me.getDataStore(),
 
             recordsCount = dataStore.getCount(),
-            recordIndex = 0, record,
+            recordIndex = 0, record, recordId, recordMetadata,
             row, rowId, column, columnId, group,
-            aggregateGroups = {};
+            aggregateGroups = {},
+            recordsMetadata = {};
 
         for (; recordIndex < recordsCount; recordIndex++) {
             record = dataStore.getAt(recordIndex);
+            recordId = record.getId();
+
+            // get target row and column for this record
             row = rowMapper(record, rowsStore);
             column = columnMapper(record, columnsStore);
 
             if (!row || !column) {
-                Ext.Logger.warn('Data record ' + record.getId() + ' not matched to ' + (row ? 'column' : 'row'));
+                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
                 continue;
             }
 
+            // create metadata container for record indexed by its id
+            recordMetadata = recordsMetadata[recordId] = {
+                record: record,
+                row: row,
+                column: column
+            };
+
+            // push record to records array for group at [rowId][columnId]
             rowId = row.getId();
             columnId = column.getId();
 
             group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
             group = group[columnId] || (group[columnId] = { records: [] });
 
-            group.records.push(record);
+            recordMetadata.group = group;
+            group.records.push(recordMetadata);
         }
 
         me.aggregateGroups = aggregateGroups;
-        console.log('built aggregateGroups', aggregateGroups);
+        console.log('built aggregateGroups: ', aggregateGroups);
+
+        me.recordsMetadata = recordsMetadata;
+        console.log('built recordsMetadata: ', recordsMetadata);
     },
 
     buildTplData: function() {
