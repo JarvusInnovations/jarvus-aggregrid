@@ -320,38 +320,28 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             columnMapper = me.getColumnMapper(),
             dataStore = me.getDataStore(),
 
-            dataCount = dataStore.getCount(),
-            dataIndex = 0, dataRecord,
-            row, rowId, column, columnId,
+            recordsCount = dataStore.getCount(),
+            recordIndex = 0, record,
+            row, rowId, column, columnId, group,
             aggregateGroups = {};
 
-        for (; dataIndex < dataCount; dataIndex++) {
-            dataRecord = dataStore.getAt(dataIndex);
-            row = rowMapper(dataRecord, rowsStore);
-            column = columnMapper(dataRecord, columnsStore);
+        for (; recordIndex < recordsCount; recordIndex++) {
+            record = dataStore.getAt(recordIndex);
+            row = rowMapper(record, rowsStore);
+            column = columnMapper(record, columnsStore);
 
-            if (!row) {
-                Ext.Logger.warn('Data record ' + dataRecord.getId() + ' not matched to row');
-                continue;
-            }
-
-            if (!column) {
-                Ext.Logger.warn('Data record ' + dataRecord.getId() + ' not matched to column');
+            if (!row || !column) {
+                Ext.Logger.warn('Data record ' + record.getId() + ' not matched to ' + (row ? 'column' : 'row'));
                 continue;
             }
 
             rowId = row.getId();
             columnId = column.getId();
 
-            if (!(rowId in aggregateGroups)) {
-                aggregateGroups[rowId] = {};
-            }
+            group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
+            group = group[columnId] || (group[columnId] = { records: [] });
 
-            if (!(columnId in aggregateGroups[rowId])) {
-                aggregateGroups[rowId][columnId] = [];
-            }
-
-            aggregateGroups[rowId][columnId].push(dataRecord);
+            group.records.push(record);
         }
 
         me.aggregateGroups = aggregateGroups;
