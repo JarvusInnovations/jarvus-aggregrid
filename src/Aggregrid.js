@@ -77,7 +77,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '<thead>',
                         '<tr>',
                             '<tpl for="columns">',
-                                '<th class="jarvus-aggregrid-colheader">',
+                                '<th class="jarvus-aggregrid-colheader" data-column-id="{id}">',
                                     '<div class="jarvus-aggregrid-header-clip">',
                                         '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
                                             '<span class="jarvus-aggregrid-header-text">',
@@ -402,7 +402,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         me.setData(me.buildTplData());
 
-        me.syncGrid(); // TODO: should this be skipped until after first aggregation?
+        me.afterRefresh(); // TODO: should this be skipped until after first aggregation?
 
         if (!me.aggregateGroups && dataStore && dataStore.isLoaded()) {
             me.aggregate();
@@ -512,35 +512,67 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return data;
     },
 
-    syncGrid: function() {
-        console.info('syncGrid');
+    afterRefresh: function() {
+        console.info('afterRefresh');
 
         var me = this,
-            rowHeadersBodyEl = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
-            dataTableBodyEl = me.el.down('.jarvus-aggregrid-data-table tbody'),
+            rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
+            columnHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead'),
+            dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody'),
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
 
-            columnEls = me.columnEls = {},
             rowEls = me.rowEls = {},
             rowHeaderEls = me.rowHeaderEls = {},
-            rowId, columnId;
-debugger
-        // for (i = 0; i < columnsCount; i++) {
-        //     columnId = columnsStore.getAt(i).getId();
-        //     columnEls[columnId] = dataTableBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+columnId+'"]');
-        // }
+            columnHeaderEls = me.columnHeaderEls = {},
+            i, rowId, columnId;
 
+        // READ phase: query dom to collect references to key elements
         for (i = 0; i < rowsCount; i++) {
             rowId = rowsStore.getAt(i).getId();
-            rowEls[rowId] = dataTableBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-            rowHeaderEls[rowId] = rowHeadersBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+            rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
         }
 
-        debugger // jarvus-aggregrid-rowheader
+        for (i = 0; i < columnsCount; i++) {
+            columnId = columnsStore.getAt(i).getId();
+            columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+        }
+
+        // READ->WRITE phase: sync row heights
+        me.syncRowHeights();
+
+        me.fireEvent('afterrefresh', me);
+    },
+
+    /**
+     * @public
+     * Synchronizes the heights of rows between the headers and data tables
+     */
+    syncRowHeights: function() {
+        var rowHeaderEls = this.rowHeaderEls,
+            rowEls = this.rowEls,
+            table1RowHeights = {},
+            table2RowHeights = {},
+            rowKey, maxHeight;
+
+        Ext.batchLayouts(function() {
+            // read all the row height in batch first for both tables
+            for (rowKey in rowHeaderEls) { // eslint-disable-line guard-for-in
+                table1RowHeights[rowKey] = rowHeaderEls[rowKey].getHeight();
+                table2RowHeights[rowKey] = rowEls[rowKey].getHeight();
+            }
+
+            // write all the max row heights
+            for (rowKey in rowHeaderEls) { // eslint-disable-line guard-for-in
+                maxHeight = Math.max(table1RowHeights[rowKey], table2RowHeights[rowKey]);
+                rowHeaderEls[rowKey].select('td, th').setHeight(maxHeight);
+                rowEls[rowKey].select('td, th').setHeight(maxHeight);
+            }
+        });
     },
 
     doRenderCells: function() {
