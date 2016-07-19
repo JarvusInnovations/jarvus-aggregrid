@@ -297,9 +297,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             // push record to records array for group at [rowId][columnId]
             rowId = row.getId();
             columnId = column.getId();
-
-            group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
-            group = group[columnId] || (group[columnId] = { records: [] });
+            group = aggregateGroups[rowId][columnId];
 
             recordMetadata.group = group;
             group.records.push(recordMetadata);
@@ -359,8 +357,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         // get new group
         rowId = row.getId();
         columnId = column.getId();
-        group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
-        group = group[columnId] || (group[columnId] = { records: [] });
+        group = aggregateGroups[rowId][columnId];
 
         // move record to new group
         Ext.Array.remove(previousGroup.records, recordMetadata);
@@ -402,9 +399,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         me.setData(me.buildTplData());
 
-        me.afterRefresh(); // TODO: should this be skipped until after first aggregation?
+        me.afterRefresh();
 
-        if (!me.aggregateGroups && dataStore && dataStore.isLoaded()) {
+        if (dataStore && dataStore.isLoaded()) {
             me.aggregate();
         }
     },
@@ -433,6 +430,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         console.info('doAggregate');
 
         var me = this,
+            aggregateGroups = me.aggregateGroups,
+            recordsMetadata = me.recordsMetadata = {},
+
             rowsStore = me.getRowsStore(),
             rowMapper = me.getRowMapper(),
             columnsStore = me.getColumnsStore(),
@@ -441,9 +441,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             recordsCount = dataStore.getCount(),
             recordIndex = 0, record, recordId, recordMetadata,
-            row, rowId, column, columnId, group,
-            aggregateGroups = {},
-            recordsMetadata = {};
+            row, rowId, column, columnId, group;
 
         for (; recordIndex < recordsCount; recordIndex++) {
             record = dataStore.getAt(recordIndex);
@@ -468,17 +466,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             // push record to records array for group at [rowId][columnId]
             rowId = row.getId();
             columnId = column.getId();
-
-            group = aggregateGroups[rowId] || (aggregateGroups[rowId] = {});
-            group = group[columnId] || (group[columnId] = { records: [] });
+            group = aggregateGroups[rowId][columnId];
 
             recordMetadata.group = group;
             group.records.push(recordMetadata);
         }
-
-        // save complete new data structures
-        me.aggregateGroups = aggregateGroups;
-        me.recordsMetadata = recordsMetadata;
     },
 
     buildTplData: function() {
@@ -528,17 +520,33 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowEls = me.rowEls = {},
             rowHeaderEls = me.rowHeaderEls = {},
             columnHeaderEls = me.columnHeaderEls = {},
-            i, rowId, columnId;
+            aggregateGroups = me.aggregateGroups = {},
+
+            rowIndex, rowId, rowEl, rowGroups,
+            columnIndex, columnId;
 
         // READ phase: query dom to collect references to key elements
-        for (i = 0; i < rowsCount; i++) {
-            rowId = rowsStore.getAt(i).getId();
-            rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+        for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
+            rowId = rowsStore.getAt(rowIndex).getId();
             rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+            rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+            rowGroups = aggregateGroups[rowId] = {};
+
+            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                columnId = columnsStore.getAt(columnIndex).getId();
+                columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+
+                rowGroups[columnId] = {
+                    records: [],
+                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]')
+                };
+            }
         }
 
-        for (i = 0; i < columnsCount; i++) {
-            columnId = columnsStore.getAt(i).getId();
+        for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+            columnId = columnsStore.getAt(columnIndex).getId();
             columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
         }
 
