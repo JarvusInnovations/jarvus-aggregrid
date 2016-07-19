@@ -329,7 +329,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    onDataStoreUpdate: function(store, record, operation) {
+    onDataStoreUpdate: function(store, record) {
         var me = this,
             aggregateGroups = me.aggregateGroups,
             rowsStore = me.getRowsStore(),
@@ -337,7 +337,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             columnsStore = me.getColumnsStore(),
             columnMapper = me.getColumnMapper(),
 
-            recordMetadata = me.recordsMetadata[record.getId()],
+            recordId = record.getId(),
+            recordMetadata = me.recordsMetadata[recordId],
             previousGroup = recordMetadata.group,
             row, column, rowId, columnId, group;
 
