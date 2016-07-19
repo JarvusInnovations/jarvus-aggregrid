@@ -33,7 +33,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                 '<tbody>',
                     '<tpl for="rows">',
-                        '<tr class="jarvus-aggregrid-row">',
+                        '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
                             '<th class="jarvus-aggregrid-rowheader">',
                                 '<div class="jarvus-aggregrid-header-text">',
                                     '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
@@ -58,7 +58,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                                         '</th>',
                                                     '</tr>',
                                                 '</tpl>',
-
                                             //
                                             '</tbody>',
                                         '</table>',
@@ -93,9 +92,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                     '<tbody>',
                         '<tpl for="rows">',
-                            '<tr class="jarvus-aggregrid-row">',
+                            '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
                                 '<tpl for="columns">',
-                                    '<td class="jarvus-aggregrid-cell">{text}</td>',
+                                    '<td class="jarvus-aggregrid-cell" data-column-id="{id}">{text}</td>',
                                 '</tpl>',
                             '</tr>',
 
@@ -134,9 +133,16 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     // component lifecycle
     afterRender: function() {
-        this.callParent(arguments);
+        var me = this;
 
-        this.refresh();
+        me.callParent(arguments);
+
+        // chain rendering cells to aggregation with a slight delay
+        me.on('aggregate', function() {
+            me.fireEventedAction('rendercells', [me], 'doRenderCells', me);
+        }, me, { delay: 5 });
+
+        me.refresh();
     },
 
 
@@ -395,6 +401,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         me.setData(me.buildTplData());
 
+        me.syncGrid(); // TODO: should this be skipped until after first aggregation?
+
         if (!me.aggregateGroups && dataStore && dataStore.isLoaded()) {
             me.aggregate();
         }
@@ -467,11 +475,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             group.records.push(recordMetadata);
         }
 
+        // save complete new data structures
         me.aggregateGroups = aggregateGroups;
-        console.log('built aggregateGroups: ', aggregateGroups);
-
         me.recordsMetadata = recordsMetadata;
-        console.log('built recordsMetadata: ', recordsMetadata);
     },
 
     buildTplData: function() {
@@ -503,5 +509,54 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         return data;
+    },
+
+    syncGrid: function() {
+        console.info('syncGrid');
+
+        var me = this,
+            rowHeadersBodyEl = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
+            dataTableBodyEl = me.el.down('.jarvus-aggregrid-data-table tbody'),
+
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+            rowsStore = me.getRowsStore(),
+            rowsCount = rowsStore.getCount(),
+
+            columnEls = me.columnEls = {},
+            rowEls = me.rowEls = {},
+            rowHeaderEls = me.rowHeaderEls = {},
+            rowId, columnId;
+debugger
+        // for (i = 0; i < columnsCount; i++) {
+        //     columnId = columnsStore.getAt(i).getId();
+        //     columnEls[columnId] = dataTableBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+columnId+'"]');
+        // }
+
+        for (i = 0; i < rowsCount; i++) {
+            rowId = rowsStore.getAt(i).getId();
+            rowEls[rowId] = dataTableBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+            rowHeaderEls[rowId] = rowHeadersBodyEl.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+        }
+
+        debugger // jarvus-aggregrid-rowheader
+    },
+
+    doRenderCells: function() {
+        console.info('doRenderCells');
+
+        // var me = this,
+        //     aggregateGroups = me.aggregateGroups,
+        //     rowId, columns, columnId, group;
+
+        // for (rowId in aggregateGroups) {
+        //     columns = aggregateGroups[rowId];
+        //     for (columnId in columns) {
+        //         group = columns[columnId];
+
+        //         debugger;
+        //         tableBodyEl;
+        //     }
+        // }
     }
 });
