@@ -406,73 +406,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    /**
-     * Triggers a complete rebuild of aggregateGroups structure
-     */
-    aggregate: function() {
-        var me = this,
-            store = me.getDataStore();
-
-        if (!store || !store.isLoaded()) {
-            return;
-        }
-
-        console.info('aggregate');
-
-        me.fireEventedAction('aggregate', [me], 'doAggregate', me);
-    },
-
-    /**
-     * @private
-     * Generate the full aggregateGroups structure and flush to DOM
-     */
-    doAggregate: function() {
-        console.info('doAggregate');
-
-        var me = this,
-            aggregateGroups = me.aggregateGroups,
-            recordsMetadata = me.recordsMetadata = {},
-
-            rowsStore = me.getRowsStore(),
-            rowMapper = me.getRowMapper(),
-            columnsStore = me.getColumnsStore(),
-            columnMapper = me.getColumnMapper(),
-            dataStore = me.getDataStore(),
-
-            recordsCount = dataStore.getCount(),
-            recordIndex = 0, record, recordId, recordMetadata,
-            row, rowId, column, columnId, group;
-
-        for (; recordIndex < recordsCount; recordIndex++) {
-            record = dataStore.getAt(recordIndex);
-            recordId = record.getId();
-
-            // get target row and column for this record
-            row = rowMapper(record, rowsStore);
-            column = columnMapper(record, columnsStore);
-
-            if (!row || !column) {
-                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
-                continue;
-            }
-
-            // create metadata container for record indexed by its id
-            recordMetadata = recordsMetadata[recordId] = {
-                record: record,
-                row: row,
-                column: column
-            };
-
-            // push record to records array for group at [rowId][columnId]
-            rowId = row.getId();
-            columnId = column.getId();
-            group = aggregateGroups[rowId][columnId];
-
-            recordMetadata.group = group;
-            group.records.push(recordMetadata);
-        }
-    },
-
     buildTplData: function() {
         var me = this,
             columnsStore = me.getColumnsStore(),
@@ -581,6 +514,73 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 rowEls[rowKey].select('td, th').setHeight(maxHeight);
             }
         });
+    },
+
+    /**
+     * Triggers a complete rebuild of aggregateGroups structure
+     */
+    aggregate: function() {
+        var me = this,
+            store = me.getDataStore();
+
+        if (!store || !store.isLoaded()) {
+            return;
+        }
+
+        console.info('aggregate');
+
+        me.fireEventedAction('aggregate', [me], 'doAggregate', me);
+    },
+
+    /**
+     * @private
+     * Generate the full aggregateGroups structure and flush to DOM
+     */
+    doAggregate: function() {
+        console.info('doAggregate');
+
+        var me = this,
+            aggregateGroups = me.aggregateGroups,
+            recordsMetadata = me.recordsMetadata = {},
+
+            rowsStore = me.getRowsStore(),
+            rowMapper = me.getRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+            dataStore = me.getDataStore(),
+
+            recordsCount = dataStore.getCount(),
+            recordIndex = 0, record, recordId, recordMetadata,
+            row, rowId, column, columnId, group;
+
+        for (; recordIndex < recordsCount; recordIndex++) {
+            record = dataStore.getAt(recordIndex);
+            recordId = record.getId();
+
+            // get target row and column for this record
+            row = rowMapper(record, rowsStore);
+            column = columnMapper(record, columnsStore);
+
+            if (!row || !column) {
+                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+                continue;
+            }
+
+            // create metadata container for record indexed by its id
+            recordMetadata = recordsMetadata[recordId] = {
+                record: record,
+                row: row,
+                column: column
+            };
+
+            // push record to records array for group at [rowId][columnId]
+            rowId = row.getId();
+            columnId = column.getId();
+            group = aggregateGroups[rowId][columnId];
+
+            recordMetadata.group = group;
+            group.records.push(recordMetadata);
+        }
     },
 
     doRenderCells: function() {
