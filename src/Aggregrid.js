@@ -603,7 +603,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             aggregateGroups = me.aggregateGroups,
             cellTpl = me.getCellTpl(),
             cellRenderer = me.getCellRenderer(),
-            rowId, columns, columnId, group;
+            rowId, columns, columnId, group, cellEl;
 
         if (!cellTpl && !cellRenderer) {
             return;
@@ -614,9 +614,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             for (columnId in columns) { // eslint-disable-line guard-for-in
                 group = columns[columnId];
+                cellEl = group.cellEl;
 
                 if (cellTpl) {
-                    cellTpl.overwrite(group.cellEl, group);
+                    cellTpl.overwrite(cellEl, group);
+                }
+
+                if (cellRenderer) {
+                    cellRenderer.call(this, group, cellEl);
                 }
             }
         }
