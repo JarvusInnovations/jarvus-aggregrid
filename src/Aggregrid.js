@@ -15,6 +15,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         rowHeaderTpl: false,
         rowMapper: 'row_id',
 
+        cellTpl: '{records.length}',
+        cellRenderer: false,
+
         componentCls: 'jarvus-aggregrid'
     },
 
@@ -246,6 +249,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return function(dataRecord, rowsStore) {
             return rowsStore.getById(dataRecord.get(rowMapper));
         };
+    },
+
+    applyCellTpl: function(tpl) {
+        if (tpl && !tpl.isTemplate) {
+            tpl = new Ext.XTemplate(tpl);
+        }
+
+        return tpl;
     },
 
 
@@ -582,18 +593,22 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     doRenderCells: function() {
         console.info('doRenderCells');
 
-        // var me = this,
-        //     aggregateGroups = me.aggregateGroups,
-        //     rowId, columns, columnId, group;
+        var me = this,
+            aggregateGroups = me.aggregateGroups,
+            cellTpl = me.getCellTpl(),
+            cellRenderer = me.getCellRenderer(),
+            rowId, columns, columnId, group;
 
-        // for (rowId in aggregateGroups) {
-        //     columns = aggregateGroups[rowId];
-        //     for (columnId in columns) {
-        //         group = columns[columnId];
+        for (rowId in aggregateGroups) { // eslint-disable-line guard-for-in
+            columns = aggregateGroups[rowId];
 
-        //         debugger;
-        //         tableBodyEl;
-        //     }
-        // }
+            for (columnId in columns) { // eslint-disable-line guard-for-in
+                group = columns[columnId];
+
+                if (cellTpl) {
+                    cellTpl.overwrite(group.cellEl, group);
+                }
+            }
+        }
     }
 });
