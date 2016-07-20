@@ -204,32 +204,28 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    applyColumnHeaderTpl: function(columnHeaderTpl) {
-        var me = this;
-
-        if (!columnHeaderTpl) {
-            columnHeaderTpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + me.getColumnHeaderField() + '"]]}'
+    applyColumnHeaderTpl: function(tpl) {
+        if (!tpl) {
+            tpl = new Ext.XTemplate(
+                '{[typeof values === "string" ? values : values["' + this.getColumnHeaderField() + '"]]}'
             );
-        } else if (!columnHeaderTpl.isTemplate) {
-            columnHeaderTpl = new Ext.XTemplate(columnHeaderTpl);
+        } else if (!tpl.isTemplate) {
+            tpl = new Ext.XTemplate(tpl);
         }
 
-        return columnHeaderTpl;
+        return tpl;
     },
 
-    applyRowHeaderTpl: function(rowHeaderTpl) {
-        var me = this;
-
-        if (!rowHeaderTpl) {
-            rowHeaderTpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + me.getRowHeaderField() + '"]]}'
+    applyRowHeaderTpl: function(tpl) {
+        if (!tpl) {
+            tpl = new Ext.XTemplate(
+                '{[typeof values === "string" ? values : values["' + this.getRowHeaderField() + '"]]}'
             );
-        } else if (!rowHeaderTpl.isTemplate) {
-            rowHeaderTpl = new Ext.XTemplate(rowHeaderTpl);
+        } else if (!tpl.isTemplate) {
+            tpl = new Ext.XTemplate(tpl);
         }
 
-        return rowHeaderTpl;
+        return tpl;
     },
 
     applyColumnMapper: function(columnMapper) {
