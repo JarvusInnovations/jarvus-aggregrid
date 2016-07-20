@@ -462,12 +462,13 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             columnHeaderEls = me.columnHeaderEls = {},
             aggregateGroups = me.aggregateGroups = {},
 
-            rowIndex, rowId, rowEl, rowGroups,
-            columnIndex, columnId;
+            rowIndex, row, rowId, rowEl, rowGroups,
+            columnIndex, column, columnId;
 
         // READ phase: query dom to collect references to key elements
         for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
-            rowId = rowsStore.getAt(rowIndex).getId();
+            row = rowsStore.getAt(rowIndex);
+            rowId = row.getId();
             rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
             rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
@@ -475,12 +476,17 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowGroups = aggregateGroups[rowId] = {};
 
             for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                columnId = columnsStore.getAt(columnIndex).getId();
+                column = columnsStore.getAt(columnIndex);
+                columnId = column.getId();
                 columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
 
                 rowGroups[columnId] = {
                     records: [],
-                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]')
+                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
+                    row: row,
+                    rowId: rowId,
+                    column: column,
+                    columnId: columnId
                 };
             }
         }
