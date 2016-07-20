@@ -599,6 +599,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             cellRenderer = me.getCellRenderer(),
             rowId, columns, columnId, group;
 
+        if (!cellTpl && !cellRenderer) {
+            return;
+        }
+
         for (rowId in aggregateGroups) { // eslint-disable-line guard-for-in
             columns = aggregateGroups[rowId];
 
