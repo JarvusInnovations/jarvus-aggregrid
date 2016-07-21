@@ -18,106 +18,46 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         cellTpl: '{records.length}',
         cellRenderer: false,
 
-        componentCls: 'jarvus-aggregrid'
-    },
+        componentCls: 'jarvus-aggregrid',
+        tpl: [
+            '{% var columnsCount = values.columns.length %}',
+            '{% var rowsCount = values.rows.length %}',
 
-
-    tpl: [
-        '{% var columnsCount = values.columns.length %}',
-        '{% var rowsCount = values.rows.length %}',
-
-        '<div class="jarvus-aggregrid-rowheaders-ct">',
-            '<table class="jarvus-aggregrid-rowheaders-table">',
-                '<thead>',
-                    '<tr>',
-                        '<td class="jarvus-aggregrid-cornercell">&nbsp;</td>',
-                    '</tr>',
-                '</thead>',
-
-                '<tbody>',
-                    '<tpl for="rows">',
-                        '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
-                            '<th class="jarvus-aggregrid-rowheader">',
-                                '<div class="jarvus-aggregrid-header-text">',
-                                    '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
-                                '</div>',
-                            '</th>',
-                        '</tr>',
-
-                        // expander infrastructure
-                        '<tpl if="values.rows && values.rows.length">',
-                            '<tr class="jarvus-aggregrid-expander">',
-                                '<td class="jarvus-aggregrid-expander-cell">',
-                                    '<div class="jarvus-aggregrid-expander-ct">',
-                                        '<table class="jarvus-aggregrid-expander-table">',
-                                            '<tbody>',
-                                            //
-                                                '<tpl for="rows">',
-                                                    '<tr class="jarvus-aggregrid-subrow">',
-                                                        '<th class="jarvus-aggregrid-rowheader">',
-                                                            '<span class="jarvus-aggregrid-header-text">',
-                                                                '{% ;(values.rowHeaderTpl||parent.rowHeaderTpl).applyOut(values, out, parent) %}',
-                                                            '</span>',
-                                                        '</th>',
-                                                    '</tr>',
-                                                '</tpl>',
-                                            //
-                                            '</tbody>',
-                                        '</table>',
-                                    '</div>',
-                                '</td>',
-                            '</tr>',
-                        '</tpl>',
-                        //
-                    '</tpl>',
-                '</tbody>',
-            '</table>',
-        '</div>',
-
-        '<div class="jarvus-aggregrid-scroller">',
-            '<div class="jarvus-aggregrid-data-ct">',
-                '<table class="jarvus-aggregrid-data-table">',
+            '<div class="jarvus-aggregrid-rowheaders-ct">',
+                '<table class="jarvus-aggregrid-rowheaders-table">',
                     '<thead>',
                         '<tr>',
-                            '<tpl for="columns">',
-                                '<th class="jarvus-aggregrid-colheader" data-column-id="{id}">',
-                                    '<div class="jarvus-aggregrid-header-clip">',
-                                        '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
-                                            '<span class="jarvus-aggregrid-header-text">',
-                                                 '{% values.columnHeaderTpl.applyOut(values, out, parent) %}',
-                                            '</span>',
-                                        '</a>',
-                                    '</div>',
-                                '</th>',
-                            '</tpl>',
+                            '<td class="jarvus-aggregrid-cornercell">&nbsp;</td>',
                         '</tr>',
                     '</thead>',
 
                     '<tbody>',
                         '<tpl for="rows">',
                             '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
-                                '<tpl for="columns">',
-                                    '<td class="jarvus-aggregrid-cell" data-column-id="{id}">{text}</td>',
-                                '</tpl>',
+                                '<th class="jarvus-aggregrid-rowheader">',
+                                    '<div class="jarvus-aggregrid-header-text">',
+                                        '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
+                                    '</div>',
+                                '</th>',
                             '</tr>',
 
                             // expander infrastructure
                             '<tpl if="values.rows && values.rows.length">',
                                 '<tr class="jarvus-aggregrid-expander">',
-                                    '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
+                                    '<td class="jarvus-aggregrid-expander-cell">',
                                         '<div class="jarvus-aggregrid-expander-ct">',
                                             '<table class="jarvus-aggregrid-expander-table">',
                                                 '<tbody>',
                                                 //
-
                                                     '<tpl for="rows">',
                                                         '<tr class="jarvus-aggregrid-subrow">',
-                                                            '<tpl for="columns">',
-                                                                '<td class="jarvus-aggregrid-cell">{text}</td>',
-                                                            '</tpl>',
+                                                            '<th class="jarvus-aggregrid-rowheader">',
+                                                                '<span class="jarvus-aggregrid-header-text">',
+                                                                    '{% ;(values.rowHeaderTpl||parent.rowHeaderTpl).applyOut(values, out, parent) %}',
+                                                                '</span>',
+                                                            '</th>',
                                                         '</tr>',
                                                     '</tpl>',
-
                                                 //
                                                 '</tbody>',
                                             '</table>',
@@ -130,8 +70,66 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '</tbody>',
                 '</table>',
             '</div>',
-        '</div>'
-    ],
+
+            '<div class="jarvus-aggregrid-scroller">',
+                '<div class="jarvus-aggregrid-data-ct">',
+                    '<table class="jarvus-aggregrid-data-table">',
+                        '<thead>',
+                            '<tr>',
+                                '<tpl for="columns">',
+                                    '<th class="jarvus-aggregrid-colheader" data-column-id="{id}">',
+                                        '<div class="jarvus-aggregrid-header-clip">',
+                                            '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
+                                                '<span class="jarvus-aggregrid-header-text">',
+                                                    '{% values.columnHeaderTpl.applyOut(values, out, parent) %}',
+                                                '</span>',
+                                            '</a>',
+                                        '</div>',
+                                    '</th>',
+                                '</tpl>',
+                            '</tr>',
+                        '</thead>',
+
+                        '<tbody>',
+                            '<tpl for="rows">',
+                                '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
+                                    '<tpl for="columns">',
+                                        '<td class="jarvus-aggregrid-cell" data-column-id="{id}">{text}</td>',
+                                    '</tpl>',
+                                '</tr>',
+
+                                // expander infrastructure
+                                '<tpl if="values.rows && values.rows.length">',
+                                    '<tr class="jarvus-aggregrid-expander">',
+                                        '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
+                                            '<div class="jarvus-aggregrid-expander-ct">',
+                                                '<table class="jarvus-aggregrid-expander-table">',
+                                                    '<tbody>',
+                                                    //
+
+                                                        '<tpl for="rows">',
+                                                            '<tr class="jarvus-aggregrid-subrow">',
+                                                                '<tpl for="columns">',
+                                                                    '<td class="jarvus-aggregrid-cell">{text}</td>',
+                                                                '</tpl>',
+                                                            '</tr>',
+                                                        '</tpl>',
+
+                                                    //
+                                                    '</tbody>',
+                                                '</table>',
+                                            '</div>',
+                                        '</td>',
+                                    '</tr>',
+                                '</tpl>',
+                                //
+                            '</tpl>',
+                        '</tbody>',
+                    '</table>',
+                '</div>',
+            '</div>'
+        ]
+    },
 
 
     // component lifecycle
