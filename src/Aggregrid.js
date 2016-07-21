@@ -20,6 +20,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         cellRenderer: false,
 
         componentCls: 'jarvus-aggregrid',
+        listeners: {
+            click: {
+                element: 'el',
+                fn: 'onClick'
+            }
+        },
         tpl: [
             '{% var columnsCount = values.columns.length %}',
             '{% var rowsCount = values.rows.length %}',
@@ -372,6 +378,45 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         group.records.push(recordMetadata);
 
         me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
+    },
+
+    onClick: function(ev, target) {
+        var me = this,
+            containerEl = me.el;
+
+        if (target = ev.getTarget('.jarvus-aggregrid-rowheader', containerEl, true)) { // eslint-disable-line no-cond-assign
+            return me.onRowHeaderClick(target, ev);
+        }
+
+        if (target = ev.getTarget('.jarvus-aggregrid-colheader', containerEl, true)) { // eslint-disable-line no-cond-assign
+            return me.onColumnHeaderClick(target, ev);
+        }
+
+        if (target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) { // eslint-disable-line no-cond-assign
+            return me.onCellClick(target, ev);
+        }
+    },
+
+    onRowHeaderClick: function(el, ev) {
+        var me = this,
+            rowId = parseInt(el.up('.jarvus-aggregrid-row').getAttribute('data-row-id'), 10);
+
+        me.fireEvent('rowheaderclick', me, rowId, el, ev);
+    },
+
+    onColumnHeaderClick: function(el, ev) {
+        var me = this,
+            columnId = parseInt(el.getAttribute('data-column-id'), 10);
+
+        me.fireEvent('columnheaderclick', me, columnId, el, ev);
+    },
+
+    onCellClick: function(el, ev) {
+        var me = this,
+            rowId = parseInt(el.up('.jarvus-aggregrid-row').getAttribute('data-row-id'), 10),
+            columnId = parseInt(el.getAttribute('data-column-id'), 10);
+
+        me.fireEvent('cellclick', me, rowId, columnId, el, ev);
     },
 
 
