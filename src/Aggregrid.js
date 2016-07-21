@@ -231,23 +231,23 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return tpl;
     },
 
-    applyColumnMapper: function(columnMapper) {
-        if (!Ext.isString(columnMapper)) {
-            return columnMapper;
+    applyColumnMapper: function(mapper) {
+        if (!Ext.isString(mapper)) {
+            return mapper;
         }
 
         return function(dataRecord, columnsStore) {
-            return columnsStore.getById(dataRecord.get(columnMapper));
+            return columnsStore.getById(dataRecord.get(mapper));
         };
     },
 
-    applyRowMapper: function(rowMapper) {
-        if (!Ext.isString(rowMapper)) {
-            return rowMapper;
+    applyRowMapper: function(mapper) {
+        if (!Ext.isString(mapper)) {
+            return mapper;
         }
 
         return function(dataRecord, rowsStore) {
-            return rowsStore.getById(dataRecord.get(rowMapper));
+            return rowsStore.getById(dataRecord.get(mapper));
         };
     },
 
