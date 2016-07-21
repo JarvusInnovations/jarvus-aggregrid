@@ -86,8 +86,16 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         return tpl;
-    }
+    },
 
 
     // event handlers
+    onRowHeaderClick: function(rowId) {
+        var me = this;
+
+        me.callParent(arguments);
+
+        me.rowEls[rowId].toggleCls('is-expanded');
+        me.rowHeaderEls[rowId].toggleCls('is-expanded');
+    }
 });
