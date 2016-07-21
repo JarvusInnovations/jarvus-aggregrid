@@ -34,7 +34,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 '<table class="jarvus-aggregrid-rowheaders-table">',
                     '<thead>',
                         '<tr>',
-                            '<td class="jarvus-aggregrid-cornercell">&nbsp;</td>',
+                            '<td class="jarvus-aggregrid-cornercell">',
+                                '&nbsp;',
+                            '</td>',
                         '</tr>',
                     '</thead>',
 
@@ -80,6 +82,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             '<div class="jarvus-aggregrid-scroller">',
                 '<div class="jarvus-aggregrid-data-ct">',
+                    '<div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-left"></div>',
+                    '<div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-right"></div>',
+
                     '<table class="jarvus-aggregrid-data-table">',
                         '<thead>',
                             '<tr>',
@@ -101,7 +106,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '<tpl for="rows">',
                                 '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
                                     '<tpl for="columns">',
-                                        '<td class="jarvus-aggregrid-cell" data-column-id="{id}">{text}</td>',
+                                        '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
                                     '</tpl>',
                                 '</tr>',
 
@@ -117,7 +122,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                                         '<tpl for="rows">',
                                                             '<tr class="jarvus-aggregrid-subrow">',
                                                                 '<tpl for="columns">',
-                                                                    '<td class="jarvus-aggregrid-cell">{text}</td>',
+                                                                    '<td class="jarvus-aggregrid-cell {cls}">{text}</td>',
                                                                 '</tpl>',
                                                             '</tr>',
                                                         '</tpl>',
