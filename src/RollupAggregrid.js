@@ -1,6 +1,6 @@
 Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     extend: 'Jarvus.aggregrid.Aggregrid',
-    xtype: 'jarvus-rollupaggregrid'
+    xtype: 'jarvus-rollupaggregrid',
 
 
     config: {
