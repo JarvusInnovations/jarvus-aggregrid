@@ -90,12 +90,32 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     // event handlers
-    onRowHeaderClick: function(rowId) {
-        var me = this;
+    onRowHeaderClick: function(rowId, el, ev) {
+        var me = this,
+            isExpand = !me.rowExpanded[rowId];
 
         me.callParent(arguments);
 
-        me.rowEls[rowId].toggleCls('is-expanded');
-        me.rowHeaderEls[rowId].toggleCls('is-expanded');
+        me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
+    },
+
+
+    // component methods
+    afterRefresh: function() {
+        this.callParent();
+
+        this.rowExpanded = {};
+    },
+
+    doExpand: function(me, rowId) {
+        me.rowExpanded[rowId] = true;
+        me.rowEls[rowId].addCls('is-expanded');
+        me.rowHeaderEls[rowId].addCls('is-expanded');
+    },
+
+    doCollapse: function(me, rowId) {
+        me.rowExpanded[rowId] = false;
+        me.rowEls[rowId].removeCls('is-expanded');
+        me.rowHeaderEls[rowId].removeCls('is-expanded');
     }
 });
