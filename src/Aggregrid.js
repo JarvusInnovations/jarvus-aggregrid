@@ -1,5 +1,6 @@
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
+    xtype: 'jarvus-aggregrid',
 
 
     config: {
