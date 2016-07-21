@@ -389,7 +389,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             return;
         }
 
-        console.info('refresh');
+        console.info('%s.refresh', this.getId());
 
         me.fireEventedAction('refresh', [me], 'doRefresh', me);
     }, 10),
@@ -402,7 +402,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             dataStore = me.getDataStore();
 
-        console.info('doRefresh');
+        console.info('%s.doRefresh', this.getId());
 
         me.setData(me.buildTplData());
 
@@ -445,7 +445,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     afterRefresh: function() {
-        console.info('afterRefresh');
+        console.info('%s.afterRefresh', this.getId());
 
         var me = this,
             rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
@@ -540,7 +540,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             return;
         }
 
-        console.info('aggregate');
+        console.info('%s.aggregate', this.getId());
 
         me.fireEventedAction('aggregate', [me], 'doAggregate', me);
     },
@@ -550,7 +550,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * Generate the full aggregateGroups structure and flush to DOM
      */
     doAggregate: function() {
-        console.info('doAggregate');
+        console.info('%s.doAggregate', this.getId());
 
         var me = this,
             aggregateGroups = me.aggregateGroups,
@@ -597,7 +597,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     doRenderCells: function() {
-        console.info('doRenderCells');
+        console.info('%s.doRenderCells', this.getId());
 
         var me = this,
             aggregateGroups = me.aggregateGroups,
