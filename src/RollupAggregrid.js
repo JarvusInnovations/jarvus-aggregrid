@@ -3,22 +3,25 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     config: {
-        rollupRowsStore: null,
-        rollupDataStore: null,
-        rollupRowHeaderField: 'title',
-        rollupRowHeaderTpl: false,
-        rollupRowMapper: false,
-        rollupCellTpl: '{records.length}',
-        rollupRenderer: false
+        subRowsStore: null,
+        subDataStore: null,
+
+        subRowHeaderField: 'title',
+        subRowHeaderTpl: false,
+
+        subRowMapper: false,
+
+        subCellTpl: '{records.length}',
+        subCellRenderer: false
     },
 
 
     // config handlers
-    applyRollupRowsStore: function(store) {
+    applySubRowsStore: function(store) {
         return Ext.StoreMgr.lookup(store);
     },
 
-    // updateRollupRowsStore: function(store, oldStore) {
+    // updateSubRowsStore: function(store, oldStore) {
     //     var me = this;
 
     //     if (oldStore) {
@@ -31,11 +34,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     //     }
     // },
 
-    applyRollupDataStore: function(store) {
+    applySubDataStore: function(store) {
         return Ext.StoreMgr.lookup(store);
     },
 
-    // updateRollupDataStore: function(store, oldStore) {
+    // updateSubDataStore: function(store, oldStore) {
     //     var me = this,
     //         listeners = {
     //             scope: me,
@@ -54,10 +57,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     //     }
     // },
 
-    applyRollupRowHeaderTpl: function(tpl) {
+    applySubRowHeaderTpl: function(tpl) {
         if (!tpl) {
             tpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + this.getRollupRowHeaderField() + '"]]}'
+                '{[typeof values === "string" ? values : values["' + this.getSubRowHeaderField() + '"]]}'
             );
         } else if (!tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
@@ -66,7 +69,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return tpl;
     },
 
-    applyRollupRowMapper: function(mapper) {
+    applySubRowMapper: function(mapper) {
         if (!Ext.isString(mapper)) {
             return mapper;
         }
@@ -76,7 +79,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         };
     },
 
-    applyRollupCellTpl: function(tpl) {
+    applySubCellTpl: function(tpl) {
         if (tpl && !tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
         }
