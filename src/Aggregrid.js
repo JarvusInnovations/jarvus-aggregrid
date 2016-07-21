@@ -409,19 +409,19 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             );
         }
 
-        return true;
+        return null;
     },
 
     onRowHeaderClick: function(rowId, el, ev) {
-        return this.fireEvent('rowheaderclick', this, rowId, el, ev);
+        this.fireEvent('rowheaderclick', this, rowId, el, ev);
     },
 
     onColumnHeaderClick: function(columnId, el, ev) {
-        return this.fireEvent('columnheaderclick', this, columnId, el, ev);
+        this.fireEvent('columnheaderclick', this, columnId, el, ev);
     },
 
     onCellClick: function(rowId, columnId, el, ev) {
-        return this.fireEvent('cellclick', this, rowId, columnId, el, ev);
+        this.fireEvent('cellclick', this, rowId, columnId, el, ev);
     },
 
 
