@@ -185,7 +185,6 @@
     transition: 250ms;
 
     .is-expanded + .jarvus-aggregrid-expander & {
-        height: 123px; // TODO: don't hardcode this, obviously should be set in JS
         opacity: 1;
     }
 }

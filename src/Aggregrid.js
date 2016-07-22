@@ -704,13 +704,31 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     doExpand: function(me, rowId) {
         me.rowExpanded[rowId] = true;
+        me.syncExpanderHeight(rowId);
         me.rowEls[rowId].addCls('is-expanded');
         me.rowHeaderEls[rowId].addCls('is-expanded');
     },
 
     doCollapse: function(me, rowId) {
         me.rowExpanded[rowId] = false;
+        me.rowHeaderExpanderEls[rowId].setHeight(0);
+        me.rowExpanderEls[rowId].setHeight(0);
         me.rowEls[rowId].removeCls('is-expanded');
         me.rowHeaderEls[rowId].removeCls('is-expanded');
+    },
+
+    syncExpanderHeight: function(rowId) {
+        var me = this,
+            rowHeaderExpanderEl = me.rowHeaderExpanderEls[rowId],
+            rowExpanderEl = me.rowExpanderEls[rowId],
+
+            rowHeaderExpanderHeight = rowHeaderExpanderEl.first().getHeight(),
+            rowExpanderHeight = rowExpanderEl.first().getHeight(),
+            maxHeight = Math.max(rowHeaderExpanderHeight, rowExpanderHeight);
+
+        console.info('%s.syncExpanderHeight(%o) setting to max(%o, %o) = %o', this.getId(), rowId, rowHeaderExpanderHeight, rowExpanderHeight, maxHeight);
+
+        rowHeaderExpanderEl.setHeight(maxHeight);
+        rowExpanderEl.setHeight(maxHeight);
     }
 });
