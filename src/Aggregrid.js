@@ -15,6 +15,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         rowHeaderField: 'title',
         rowHeaderTpl: false,
         rowMapper: 'row_id',
+        expandable: false,
 
         cellTpl: '{records.length}',
         cellRenderer: false,
@@ -42,7 +43,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                     '<tbody>',
                         '<tpl for="rows">',
-                            '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
+                            '<tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
                                 '<th class="jarvus-aggregrid-rowheader">',
                                     '<div class="jarvus-aggregrid-header-text">',
                                         '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
@@ -51,8 +52,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '</tr>',
 
                             // expander infrastructure
-                            '<tpl if="values.rows && values.rows.length">',
-                                '<tr class="jarvus-aggregrid-expander">',
+                            '<tpl if="expandable">',
+                                '<tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
                                     '<td class="jarvus-aggregrid-expander-cell">',
                                         '<div class="jarvus-aggregrid-expander-ct">',
                                             '<table class="jarvus-aggregrid-expander-table">',
@@ -104,15 +105,15 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                         '<tbody>',
                             '<tpl for="rows">',
-                                '<tr class="jarvus-aggregrid-row" data-row-id="{id}">',
+                                '<tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
                                     '<tpl for="columns">',
                                         '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
                                     '</tpl>',
                                 '</tr>',
 
                                 // expander infrastructure
-                                '<tpl if="values.rows && values.rows.length">',
-                                    '<tr class="jarvus-aggregrid-expander">',
+                                '<tpl if="expandable">',
+                                    '<tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
                                         '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
                                             '<div class="jarvus-aggregrid-expander-ct">',
                                                 '<table class="jarvus-aggregrid-expander-table">',
@@ -419,11 +420,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     onRowHeaderClick: function(rowId, el, ev) {
         var me = this,
-            isExpand = !me.rowExpanded[rowId];
+            isExpand;
 
         me.fireEvent('rowheaderclick', this, rowId, el, ev);
 
-        me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
+        if (me.getExpandable()) {
+            isExpand = !me.rowExpanded[rowId];
+            me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
+        }
     },
 
     onColumnHeaderClick: function(columnId, el, ev) {
@@ -480,6 +484,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     buildTplData: function() {
         var me = this,
+            expandable = me.getExpandable(),
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
             columnHeaderTpl = me.getColumnHeaderTpl(),
@@ -502,6 +507,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         for (i = 0; i < rowsCount; i++) {
             rows.push(Ext.apply({
                 rowHeaderTpl: rowHeaderTpl,
+                expandable: expandable,
                 columns: columns
             }, rowsStore.getAt(i).getData()));
         }
@@ -513,6 +519,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         console.info('%s.afterRefresh', this.getId());
 
         var me = this,
+            expandable = me.getExpandable(),
             rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
             columnHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead'),
             dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody'),
@@ -524,6 +531,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             rowEls = me.rowEls = {},
             rowHeaderEls = me.rowHeaderEls = {},
+            rowExpanderEls = me.rowExpanderEls = {},
+            rowHeaderExpanderEls = me.rowHeaderExpanderEls = {},
             columnHeaderEls = me.columnHeaderEls = {},
             aggregateGroups = me.aggregateGroups = {},
 
@@ -534,15 +543,18 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
             row = rowsStore.getAt(rowIndex);
             rowId = row.getId();
-            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-
+            rowGroups = aggregateGroups[rowId] = {};
             rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
-            rowGroups = aggregateGroups[rowId] = {};
+            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+            rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+            rowHeaderExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
 
             for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
                 column = columnsStore.getAt(columnIndex);
                 columnId = column.getId();
+
                 columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
 
                 rowGroups[columnId] = {

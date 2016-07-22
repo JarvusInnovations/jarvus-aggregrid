@@ -13,7 +13,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subRowMapper: false,
 
         subCellTpl: '{records.length}',
-        subCellRenderer: false
+        subCellRenderer: false,
+
+        expandable: true
     },
 
 

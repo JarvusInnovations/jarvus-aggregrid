@@ -157,7 +157,7 @@
 }
 
 .jarvus-aggregrid-rowheader {
-    &::before {
+    .is-expandable > &::before {
         content: '\f0da'; // fa-caret-right
         display: inline-block;
         float: left;
