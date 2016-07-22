@@ -418,7 +418,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     onRowHeaderClick: function(rowId, el, ev) {
-        this.fireEvent('rowheaderclick', this, rowId, el, ev);
+        var me = this,
+            isExpand = !me.rowExpanded[rowId];
+
+        me.fireEvent('rowheaderclick', this, rowId, el, ev);
+
+        me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
     },
 
     onColumnHeaderClick: function(columnId, el, ev) {
@@ -458,10 +463,16 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         console.info('%s.doRefresh', this.getId());
 
+        // generate template data structure and execute against tpl
         me.setData(me.buildTplData());
 
+        // reset expansion state
+        me.rowExpanded = {};
+
+        // do stuff that needs to happen after each time the DOM is rebuilt
         me.afterRefresh();
 
+        // execute initial data aggregation if store is ready
         if (dataStore && dataStore.isLoaded()) {
             me.aggregate();
         }
@@ -603,11 +614,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * @private
      * Generate the full aggregateGroups structure and flush to DOM
      */
-    doAggregate: function() {
+    doAggregate: function(me) {
         console.info('%s.doAggregate', this.getId());
 
-        var me = this,
-            aggregateGroups = me.aggregateGroups,
+        var aggregateGroups = me.aggregateGroups,
             recordsMetadata = me.recordsMetadata = {},
 
             rowsStore = me.getRowsStore(),
@@ -650,11 +660,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    doRenderCells: function() {
+    doRenderCells: function(me) {
         console.info('%s.doRenderCells', this.getId());
 
-        var me = this,
-            aggregateGroups = me.aggregateGroups,
+        var aggregateGroups = me.aggregateGroups,
             cellTpl = me.getCellTpl(),
             cellRenderer = me.getCellRenderer(),
             rowId, columns, columnId, group, cellEl;
@@ -679,5 +688,17 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 }
             }
         }
+    },
+
+    doExpand: function(me, rowId) {
+        me.rowExpanded[rowId] = true;
+        me.rowEls[rowId].addCls('is-expanded');
+        me.rowHeaderEls[rowId].addCls('is-expanded');
+    },
+
+    doCollapse: function(me, rowId) {
+        me.rowExpanded[rowId] = false;
+        me.rowEls[rowId].removeCls('is-expanded');
+        me.rowHeaderEls[rowId].removeCls('is-expanded');
     }
 });
