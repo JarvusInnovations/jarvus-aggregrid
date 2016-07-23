@@ -381,7 +381,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             // get target row and column for this record
             subRow = subRowMapper(subRecord, subRowsStore);
-            parentRow = me.getParentRow(subRow.getId());
+            parentRow = subRow && me.getParentRow(subRow.getId());
             column = columnMapper(subRecord, columnsStore);
 
             if (!subRow || !parentRow || !column) {
