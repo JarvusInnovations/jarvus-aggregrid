@@ -430,8 +430,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * Render the main scaffolding of the aggregrid by columns and rows
      */
     doRefresh: function(me) {
-        var dataStore = me.getDataStore();
-
         console.info('%s.doRefresh', this.getId());
 
         // generate template data structure and execute against tpl
@@ -444,9 +442,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.afterRefresh();
 
         // execute initial data aggregation if store is ready
-        if (dataStore && dataStore.isLoaded()) {
-            me.aggregate();
-        }
+        me.aggregate();
     },
 
     buildTplData: function() {
@@ -607,7 +603,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             recordsCount = dataStore.getCount(),
             recordIndex = 0, record, recordId, recordMetadata,
-            row, rowId, column, columnId, group;
+            row, column, group;
 
         for (; recordIndex < recordsCount; recordIndex++) {
             record = dataStore.getAt(recordIndex);
@@ -630,9 +626,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             };
 
             // push record to records array for group at [rowId][columnId]
-            rowId = row.getId();
-            columnId = column.getId();
-            group = aggregateGroups[rowId][columnId];
+            group = aggregateGroups[row.getId()][column.getId()];
 
             recordMetadata.group = group;
             group.records.push(recordMetadata);
