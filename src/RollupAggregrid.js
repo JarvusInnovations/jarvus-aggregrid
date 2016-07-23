@@ -5,7 +5,9 @@
  * - [X] Use mapper to collect subrows before expand
  * - [X] Render skeleton for real subrows before expand
  * - [X] Sync subrow heights before expand
- * - [ ] Continuously map subDataStore records to groups and render
+ * - [X] Aggregate subDataStore records to groups
+ * - [ ] Render subrow cells
+ * - [ ] Continuously update aggregate subRow groups after initial aggregation
  *
  * MAYBEDO:
  * - [ ] Move some of expander lifecycle up to base class
@@ -195,6 +197,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         me.afterExpanderRefresh(rowId);
 
+        me.aggregateSubRows();
+
         me.callParent(arguments);
     },
 
@@ -340,5 +344,71 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 subRowEls[rowKey].select('td, th').setHeight(maxHeight);
             }
         });
+    },
+
+    aggregateSubRows: function() {
+        var me = this,
+            store = me.getSubDataStore();
+
+        if (!store || !store.isLoaded()) {
+            return;
+        }
+
+        console.info('%s.aggregateSubRows(%o)', this.getId());
+
+        me.fireEventedAction('aggregatesubrows', [me], 'doAggregateSubRows', me);
+    },
+
+    doAggregateSubRows: function(me) {
+        if (me.subRecordsMetadata) {
+            return;
+        }
+
+        var rowsSubMetadata = me.rowsSubMetadata,
+            subRecordsMetadata = me.subRecordsMetadata = {},
+            subDataStore = me.getSubDataStore(),
+            subRowsStore = me.getSubRowsStore(),
+            columnsStore = me.getColumnsStore(),
+            subRowMapper = me.getSubRowMapper(),
+            columnMapper = me.getColumnMapper(),
+            subRecordsCount = subDataStore.getCount(),
+            subRecordIndex = 0, subRecord, subRecordId, parentSubMetadata, subRecordMetadata,
+            subRow, subRowId, parentRow, column, columnId, group;
+
+        for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
+            subRecord = subDataStore.getAt(subRecordIndex);
+            subRecordId = subRecord.getId();
+
+            // get target row and column for this record
+            subRow = subRowMapper(subRecord, subRowsStore);
+            parentRow = me.getParentRow(subRow.getId());
+            column = columnMapper(subRecord, columnsStore);
+
+            if (!subRow || !parentRow || !column) {
+                Ext.Logger.warn('Data record ' + subRecordId + ' not matched to ' + (!subRow ? 'subRow' : !parentRow ? 'parentRow' : 'column')); // eslint-disable-line no-negated-condition, no-nested-ternary
+                continue;
+            }
+
+            // create metadata container for record indexed by its id
+            subRecordMetadata = subRecordsMetadata[subRecordId] = {
+                record: subRecord,
+                subRow: subRow,
+                parentRow: parentRow,
+                column: column
+            };
+
+            // push record to records array for group at [rowId][columnId]
+            parentSubMetadata = rowsSubMetadata[parentRow.getId()];
+            group = parentSubMetadata.groups;
+
+            subRowId = subRow.getId();
+            group = group[subRowId] || (group[subRowId] = {});
+
+            columnId = column.getId();
+            group = group[columnId] || (group[columnId] = { records: [] });
+
+            subRecordMetadata.group = group;
+            group.records.push(subRecordMetadata);
+        }
     }
 });
