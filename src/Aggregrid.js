@@ -55,23 +55,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '<tpl if="expandable">',
                                 '<tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
                                     '<td class="jarvus-aggregrid-expander-cell">',
-                                        '<div class="jarvus-aggregrid-expander-ct">',
-                                            '<table class="jarvus-aggregrid-expander-table">',
-                                                '<tbody>',
-                                                //
-                                                    '<tpl for="rows">',
-                                                        '<tr class="jarvus-aggregrid-subrow">',
-                                                            '<th class="jarvus-aggregrid-rowheader">',
-                                                                '<span class="jarvus-aggregrid-header-text">',
-                                                                    '{% ;(values.rowHeaderTpl||parent.rowHeaderTpl).applyOut(values, out, parent) %}',
-                                                                '</span>',
-                                                            '</th>',
-                                                        '</tr>',
-                                                    '</tpl>',
-                                                //
-                                                '</tbody>',
-                                            '</table>',
-                                        '</div>',
+                                        '<div class="jarvus-aggregrid-expander-ct"></div>',
                                     '</td>',
                                 '</tr>',
                             '</tpl>',
@@ -115,23 +99,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                 '<tpl if="expandable">',
                                     '<tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
                                         '<td class="jarvus-aggregrid-expander-cell" colspan="{[ columnsCount ]}">',
-                                            '<div class="jarvus-aggregrid-expander-ct">',
-                                                '<table class="jarvus-aggregrid-expander-table">',
-                                                    '<tbody>',
-                                                    //
-
-                                                        '<tpl for="rows">',
-                                                            '<tr class="jarvus-aggregrid-subrow">',
-                                                                '<tpl for="columns">',
-                                                                    '<td class="jarvus-aggregrid-cell {cls}">{text}</td>',
-                                                                '</tpl>',
-                                                            '</tr>',
-                                                        '</tpl>',
-
-                                                    //
-                                                    '</tbody>',
-                                                '</table>',
-                                            '</div>',
+                                            '<div class="jarvus-aggregrid-expander-ct"></div>',
                                         '</td>',
                                     '</tr>',
                                 '</tpl>',
@@ -461,9 +429,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * @private
      * Render the main scaffolding of the aggregrid by columns and rows
      */
-    doRefresh: function() {
-        var me = this,
-            dataStore = me.getDataStore();
+    doRefresh: function(me) {
+        var dataStore = me.getDataStore();
 
         console.info('%s.doRefresh', this.getId());
 
