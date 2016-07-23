@@ -1,13 +1,7 @@
 /**
  * TODO:
- * - [X] Set expander container height dynamically on expand
- * - [X] Make `expandable` a boolean config
- * - [X] Use mapper to collect subrows before expand
- * - [X] Render skeleton for real subrows before expand
- * - [X] Sync subrow heights before expand
- * - [X] Aggregate subDataStore records to groups
- * - [X] Render subrow cells
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
+ * - [ ] Continuously update subrow data cell renderings
  *
  * MAYBEDO:
  * - [ ] Move some of expander lifecycle up to base class

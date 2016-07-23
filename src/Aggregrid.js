@@ -1,3 +1,7 @@
+/**
+ * TODO:
+ * - [ ] Continuously update data cell renderings
+ */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
     xtype: 'jarvus-aggregrid',
