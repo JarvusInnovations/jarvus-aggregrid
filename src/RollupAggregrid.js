@@ -29,7 +29,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
                     '<tpl for="rows">',
-                        '<tr class="jarvus-aggregrid-subrow">',
+                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
                             '<th class="jarvus-aggregrid-rowheader">',
                                 '<span class="jarvus-aggregrid-header-text">',
                                     '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
@@ -44,9 +44,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
                     '<tpl for="rows">',
-                        '<tr class="jarvus-aggregrid-subrow">',
+                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
                             '<tpl for="columns">',
-                                '<td class="jarvus-aggregrid-cell {cls}">{text}</td>',
+                                '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
                             '</tpl>',
                         '</tr>',
                     '</tpl>',
@@ -166,10 +166,15 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doExpand: function(me, rowId) {
-        var expanderTplData = me.buildExpanderTplData(rowId);
+        console.info('%s.doExpand(%o)', this.getId(), rowId);
 
-        me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData);
-        me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData);
+        var subRowsData = me.rowsSubRows[rowId],
+            expanderTplData = me.buildExpanderTplData(rowId);
+
+        subRowsData.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
+        subRowsData.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
+
+        me.afterExpanderRefresh(rowId);
 
         me.callParent(arguments);
     },
@@ -222,5 +227,50 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         return data;
+    },
+
+    afterExpanderRefresh: function(rowId) {
+        console.info('%s.afterExpanderRefresh(%o)', this.getId(), rowId);
+
+        var me = this,
+            subRowsData = me.rowsSubRows[rowId],
+            headersEl = subRowsData.headersEl,
+            bodyEl = subRowsData.bodyEl,
+
+            rowEls = subRowsData.rowEls = {},
+            rowHeaderEls = subRowsData.rowHeaderEls = {},
+            groups = subRowsData.groups = {},
+
+            rows = subRowsData.records,
+            rowsCount = rows.length,
+            rowIndex = 0, row, rowGroups, rowEl,
+
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+            columnIndex, column, columnId;
+
+        // READ phase: query dom to collect references to key elements
+        for (; rowIndex < rowsCount; rowIndex++) {
+            row = rows[rowIndex];
+            rowId = row.getId();
+            rowGroups = groups[rowId] = {};
+
+            rowHeaderEls[rowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+rowId+'"]');
+            rowEl = rowEls[rowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+rowId+'"]');
+
+            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                column = columnsStore.getAt(columnIndex);
+                columnId = column.getId();
+
+                rowGroups[columnId] = {
+                    records: [],
+                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
+                    row: row,
+                    rowId: rowId,
+                    column: column,
+                    columnId: columnId
+                };
+            }
+        }
     }
 });
