@@ -19,7 +19,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subRowsStore: null,
         subDataStore: null,
 
-        subRowMapper: 'parent_row_id',
+        parentRowMapper: 'parent_row_id',
 
         subRowHeaderField: 'title',
         subRowHeaderTpl: false,
@@ -112,7 +112,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return tpl;
     },
 
-    applySubRowMapper: function(mapper) {
+    applyParentRowMapper: function(mapper) {
         if (!Ext.isString(mapper)) {
             return mapper;
         }
@@ -194,7 +194,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             rowsStore = me.getRowsStore(),
             subRowsStore = me.getSubRowsStore(),
-            subRowMapper = me.getSubRowMapper(),
+            parentRowMapper = me.getParentRowMapper(),
             subRowsCount = subRowsStore.getCount(),
             subRowIndex = 0, subRow, subRowParent,
 
@@ -209,7 +209,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             for (; subRowIndex < subRowsCount; subRowIndex++) {
                 subRow = subRowsStore.getAt(subRowIndex);
-                subRowParent = subRowMapper(subRow, rowsStore);
+                subRowParent = parentRowMapper(subRow, rowsStore);
 
                 if (subRowParent.getId() == rowId) {
                     subRowsRecords.push(subRow);
