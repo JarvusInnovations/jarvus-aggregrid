@@ -20,6 +20,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subDataStore: null,
 
         parentRowMapper: 'parent_row_id',
+        subRowMapper: 'sub_row_id',
 
         subRowHeaderField: 'title',
         subRowHeaderTpl: false,
@@ -31,7 +32,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         expanderHeadersTpl: [
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
-                    '<tpl for="rows">',
+                    '<tpl for="subRows">',
                         '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
                             '<th class="jarvus-aggregrid-rowheader">',
                                 '<span class="jarvus-aggregrid-header-text">',
@@ -46,7 +47,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         expanderBodyTpl: [
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
-                    '<tpl for="rows">',
+                    '<tpl for="subRows">',
                         '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
                             '<tpl for="columns">',
                                 '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
@@ -122,6 +123,16 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         };
     },
 
+    applySubRowMapper: function(mapper) {
+        if (!Ext.isString(mapper)) {
+            return mapper;
+        }
+
+        return function(dataRecord, subRowsStore) {
+            return subRowsStore.getById(dataRecord.get(mapper));
+        };
+    },
+
     applySubCellTpl: function(tpl) {
         if (tpl && !tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
@@ -152,7 +163,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     // component methods
     doRefresh: function(me) {
-        var rowsSubRows = me.rowsSubRows = {},
+        var rowsSubMetadata = me.rowsSubMetadata = {},
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
             rowIndex = 0, row, rowId;
@@ -164,18 +175,23 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             row = rowsStore.getAt(rowIndex);
             rowId = row.getId();
 
-            rowsSubRows[rowId] = {};
+            rowsSubMetadata[rowId] = {
+                row: row,
+                rowId: rowId,
+                subRows: [],
+                groups: {}
+            };
         }
     },
 
     doExpand: function(me, rowId) {
         console.info('%s.doExpand(%o)', this.getId(), rowId);
 
-        var subRowsData = me.rowsSubRows[rowId],
+        var rowSubMetadata = me.rowsSubMetadata[rowId],
             expanderTplData = me.buildExpanderTplData(rowId);
 
-        subRowsData.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
-        subRowsData.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
+        rowSubMetadata.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
+        rowSubMetadata.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
 
         me.afterExpanderRefresh(rowId);
 
@@ -184,67 +200,82 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     buildExpanderTplData: function(rowId) {
         var me = this,
-            subRowsData = me.rowsSubRows[rowId],
-            subRowsRecords = subRowsData.records,
             rowHeaderTpl = me.getSubRowHeaderTpl() || me.getRowHeaderTpl(),
-            // subRowsGroups = subRowsData.groups,
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
+            columnIndex = 0,
+
+            subRows = me.getSubRows(rowId),
+            subRowsCount = subRows.length,
+            subRowIndex = 0,
+
+            data = {},
+            columnsData = data.columns = [],
+            subRowsData = data.subRows = [];
+
+        // generate columns and rows render data
+        for (; columnIndex < columnsCount; columnIndex++) {
+            columnsData.push(columnsStore.getAt(columnIndex).getData());
+        }
+
+        for (; subRowIndex < subRowsCount; subRowIndex++) {
+            subRowsData.push(Ext.apply({
+                rowHeaderTpl: rowHeaderTpl,
+                columns: columnsData
+            }, subRows[subRowIndex].getData()));
+        }
+
+        return data;
+    },
+
+    groupSubRows: function() {
+        if (this.subRowParents) {
+            return;
+        }
+
+        var me = this,
+            rowsSubMetadata = me.rowsSubMetadata,
+            subRowParents = me.subRowParents = {},
 
             rowsStore = me.getRowsStore(),
             subRowsStore = me.getSubRowsStore(),
             parentRowMapper = me.getParentRowMapper(),
             subRowsCount = subRowsStore.getCount(),
-            subRowIndex = 0, subRow, subRowParent,
+            subRowIndex = 0, subRow, parentRow;
 
-            i,
-            data = {},
-            columns = data.columns = [],
-            rows = data.rows = [];
+        for (; subRowIndex < subRowsCount; subRowIndex++) {
+            subRow = subRowsStore.getAt(subRowIndex);
+            parentRow = parentRowMapper(subRow, rowsStore);
 
-        // collect and cache all subrow records that map to this row
-        if (!subRowsRecords) {
-            subRowsRecords = subRowsData.records = [];
-
-            for (; subRowIndex < subRowsCount; subRowIndex++) {
-                subRow = subRowsStore.getAt(subRowIndex);
-                subRowParent = parentRowMapper(subRow, rowsStore);
-
-                if (subRowParent.getId() == rowId) {
-                    subRowsRecords.push(subRow);
-                }
-            }
+            subRowParents[subRow.getId()] = parentRow;
+            rowsSubMetadata[parentRow.getId()].subRows.push(subRow);
         }
+    },
 
-        // generate columns and rows render data
-        for (i = 0; i < columnsCount; i++) {
-            columns.push(columnsStore.getAt(i).getData());
-        }
+    getSubRows: function(rowId) {
+        this.groupSubRows();
+        return this.rowsSubMetadata[rowId].subRows;
+    },
 
-        for (i = 0, subRowsCount = subRowsRecords.length; i < subRowsCount; i++) {
-            rows.push(Ext.apply({
-                rowHeaderTpl: rowHeaderTpl,
-                columns: columns
-            }, subRowsRecords[i].getData()));
-        }
-
-        return data;
+    getParentRow: function(subRowId) {
+        this.groupSubRows();
+        return this.subRowParents[subRowId];
     },
 
     afterExpanderRefresh: function(rowId) {
         console.info('%s.afterExpanderRefresh(%o)', this.getId(), rowId);
 
         var me = this,
-            subRowsData = me.rowsSubRows[rowId],
-            headersEl = subRowsData.headersEl,
-            bodyEl = subRowsData.bodyEl,
+            rowSubMetadata = me.rowsSubMetadata[rowId],
+            headersEl = rowSubMetadata.headersEl,
+            bodyEl = rowSubMetadata.bodyEl,
 
-            subRowEls = subRowsData.subRowEls = {},
-            subRowHeaderEls = subRowsData.subRowHeaderEls = {},
-            groups = subRowsData.groups = {},
+            subRowEls = rowSubMetadata.subRowEls = {},
+            subRowHeaderEls = rowSubMetadata.subRowHeaderEls = {},
+            groups = rowSubMetadata.groups = {},
 
-            subRows = subRowsData.records,
+            subRows = rowSubMetadata.subRows,
             subRowsCount = subRows.length,
             subRowIndex = 0, subRow, subRowId, subRowGroups, subRowEl,
 
@@ -288,9 +319,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
      */
     syncSubRowHeights: function(rowId) {
         var me = this,
-            subRowsData = me.rowsSubRows[rowId],
-            subRowEls = subRowsData.subRowEls,
-            subRowHeaderEls = subRowsData.subRowHeaderEls,
+            rowSubMetadata = me.rowsSubMetadata[rowId],
+            subRowEls = rowSubMetadata.subRowEls,
+            subRowHeaderEls = rowSubMetadata.subRowHeaderEls,
             table1RowHeights = {},
             table2RowHeights = {},
             rowKey, maxHeight;
