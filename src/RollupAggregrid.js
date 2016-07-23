@@ -6,7 +6,7 @@
  * - [X] Render skeleton for real subrows before expand
  * - [X] Sync subrow heights before expand
  * - [X] Aggregate subDataStore records to groups
- * - [ ] Render subrow cells
+ * - [X] Render subrow cells
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
  *
  * MAYBEDO:
@@ -192,12 +192,16 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var rowSubMetadata = me.rowsSubMetadata[rowId],
             expanderTplData = me.buildExpanderTplData(rowId);
 
-        rowSubMetadata.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
-        rowSubMetadata.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
+        if (!rowSubMetadata.cellsRendered) {
+            rowSubMetadata.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
+            rowSubMetadata.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
 
-        me.afterExpanderRefresh(rowId);
+            me.afterExpanderRefresh(rowId);
 
-        me.aggregateSubRows();
+            me.aggregateSubRows(rowId);
+
+            me.fireEventedAction('rendersubcells', [me, rowId], 'doRenderSubCells', me);
+        }
 
         me.callParent(arguments);
     },
@@ -274,10 +278,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             rowSubMetadata = me.rowsSubMetadata[rowId],
             headersEl = rowSubMetadata.headersEl,
             bodyEl = rowSubMetadata.bodyEl,
+            groups = rowSubMetadata.groups,
 
             subRowEls = rowSubMetadata.subRowEls = {},
             subRowHeaderEls = rowSubMetadata.subRowHeaderEls = {},
-            groups = rowSubMetadata.groups = {},
 
             subRows = rowSubMetadata.subRows,
             subRowsCount = subRows.length,
@@ -285,13 +289,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
-            columnIndex, column, columnId;
+            columnIndex, column, columnId,
+            group;
 
         // READ phase: query dom to collect references to key elements
         for (; subRowIndex < subRowsCount; subRowIndex++) {
             subRow = subRows[subRowIndex];
             subRowId = subRow.getId();
-            subRowGroups = groups[subRowId] = {};
+            subRowGroups = groups[subRowId] || (groups[subRowId] = {});
 
             subRowHeaderEls[subRowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
             subRowEl = subRowEls[subRowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
@@ -300,14 +305,12 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 column = columnsStore.getAt(columnIndex);
                 columnId = column.getId();
 
-                subRowGroups[columnId] = {
-                    records: [],
-                    cellEl: subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
-                    row: subRow,
-                    subRowId: subRowId,
-                    column: column,
-                    columnId: columnId
-                };
+                group = subRowGroups[columnId] || (subRowGroups[columnId] = { records: [] });
+                group.cellEl = subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+                group.row = subRow;
+                group.subRowId = subRowId;
+                group.column = column;
+                group.columnId = columnId;
             }
         }
 
@@ -346,7 +349,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         });
     },
 
-    aggregateSubRows: function() {
+    aggregateSubRows: function(rowId) {
         var me = this,
             store = me.getSubDataStore();
 
@@ -354,9 +357,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             return;
         }
 
-        console.info('%s.aggregateSubRows(%o)', this.getId());
+        console.info('%s.aggregateSubRows(%o)', this.getId(), rowId);
 
-        me.fireEventedAction('aggregatesubrows', [me], 'doAggregateSubRows', me);
+        me.fireEventedAction('aggregatesubrows', [me, rowId], 'doAggregateSubRows', me);
     },
 
     doAggregateSubRows: function(me) {
@@ -409,6 +412,39 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             subRecordMetadata.group = group;
             group.records.push(subRecordMetadata);
+        }
+    },
+
+    doRenderSubCells: function(me, rowId) {
+        console.info('%s.doRenderSubCells(%o)', this.getId(), rowId);
+
+        var rowSubMetadata = me.rowsSubMetadata[rowId],
+            groups = rowSubMetadata.groups,
+            subCellTpl = me.getSubCellTpl(),
+            subCellRenderer = me.getSubCellRenderer(),
+            subRowId, columns, columnId, group, cellEl;
+
+        if (!subCellTpl && !subCellRenderer) {
+            return;
+        }
+
+        rowSubMetadata.cellsRendered = true;
+
+        for (subRowId in groups) { // eslint-disable-line guard-for-in
+            columns = groups[subRowId];
+
+            for (columnId in columns) { // eslint-disable-line guard-for-in
+                group = columns[columnId];
+                cellEl = group.cellEl;
+
+                if (subCellTpl) {
+                    subCellTpl.overwrite(cellEl, group);
+                }
+
+                if (subCellRenderer) {
+                    subCellRenderer.call(this, group, cellEl);
+                }
+            }
         }
     }
 });
