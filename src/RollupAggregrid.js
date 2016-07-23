@@ -4,8 +4,11 @@
  * - [X] Make `expandable` a boolean config
  * - [X] Use mapper to collect subrows before expand
  * - [X] Render skeleton for real subrows before expand
- * - [ ] Sync subrow heights before expand
+ * - [X] Sync subrow heights before expand
  * - [ ] Continuously map subDataStore records to groups and render
+ *
+ * MAYBEDO:
+ * - [ ] Move some of expander lifecycle up to base class
  */
 Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     extend: 'Jarvus.aggregrid.Aggregrid',
@@ -237,40 +240,74 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             headersEl = subRowsData.headersEl,
             bodyEl = subRowsData.bodyEl,
 
-            rowEls = subRowsData.rowEls = {},
-            rowHeaderEls = subRowsData.rowHeaderEls = {},
+            subRowEls = subRowsData.subRowEls = {},
+            subRowHeaderEls = subRowsData.subRowHeaderEls = {},
             groups = subRowsData.groups = {},
 
-            rows = subRowsData.records,
-            rowsCount = rows.length,
-            rowIndex = 0, row, rowGroups, rowEl,
+            subRows = subRowsData.records,
+            subRowsCount = subRows.length,
+            subRowIndex = 0, subRow, subRowId, subRowGroups, subRowEl,
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
             columnIndex, column, columnId;
 
         // READ phase: query dom to collect references to key elements
-        for (; rowIndex < rowsCount; rowIndex++) {
-            row = rows[rowIndex];
-            rowId = row.getId();
-            rowGroups = groups[rowId] = {};
+        for (; subRowIndex < subRowsCount; subRowIndex++) {
+            subRow = subRows[subRowIndex];
+            subRowId = subRow.getId();
+            subRowGroups = groups[subRowId] = {};
 
-            rowHeaderEls[rowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+rowId+'"]');
-            rowEl = rowEls[rowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+rowId+'"]');
+            subRowHeaderEls[subRowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
+            subRowEl = subRowEls[subRowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
 
             for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
                 column = columnsStore.getAt(columnIndex);
                 columnId = column.getId();
 
-                rowGroups[columnId] = {
+                subRowGroups[columnId] = {
                     records: [],
-                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
-                    row: row,
-                    rowId: rowId,
+                    cellEl: subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
+                    row: subRow,
+                    subRowId: subRowId,
                     column: column,
                     columnId: columnId
                 };
             }
         }
+
+        // READ->WRITE phase: sync row heights
+        me.syncSubRowHeights(rowId);
+
+        me.fireEvent('afterexpanderrefresh', me, rowId);
+    },
+
+    /**
+     * @public
+     * Synchronizes the heights of rows between the headers and data tables
+     */
+    syncSubRowHeights: function(rowId) {
+        var me = this,
+            subRowsData = me.rowsSubRows[rowId],
+            subRowEls = subRowsData.subRowEls,
+            subRowHeaderEls = subRowsData.subRowHeaderEls,
+            table1RowHeights = {},
+            table2RowHeights = {},
+            rowKey, maxHeight;
+
+        Ext.batchLayouts(function() {
+            // read all the row height in batch first for both tables
+            for (rowKey in subRowHeaderEls) { // eslint-disable-line guard-for-in
+                table1RowHeights[rowKey] = subRowHeaderEls[rowKey].getHeight();
+                table2RowHeights[rowKey] = subRowEls[rowKey].getHeight();
+            }
+
+            // write all the max row heights
+            for (rowKey in subRowHeaderEls) { // eslint-disable-line guard-for-in
+                maxHeight = Math.max(table1RowHeights[rowKey], table2RowHeights[rowKey]);
+                subRowHeaderEls[rowKey].select('td, th').setHeight(maxHeight);
+                subRowEls[rowKey].select('td, th').setHeight(maxHeight);
+            }
+        });
     }
 });
