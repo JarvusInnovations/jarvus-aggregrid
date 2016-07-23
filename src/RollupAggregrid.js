@@ -1,3 +1,12 @@
+/**
+ * TODO:
+ * - [X] Set expander container height dynamically on expand
+ * - [X] Make `expandable` a boolean config
+ * - [X] Use mapper to collect subrows before expand
+ * - [X] Render skeleton for real subrows before expand
+ * - [ ] Sync subrow heights before expand
+ * - [ ] Continuously map subDataStore records to groups and render
+ */
 Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     extend: 'Jarvus.aggregrid.Aggregrid',
     xtype: 'jarvus-rollupaggregrid',
