@@ -696,9 +696,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     cellTpl.overwrite(cellEl, group);
                 }
 
-                if (cellRenderer) {
-                    cellRenderer.call(me, group, cellEl);
-                }
+                group.rendered = cellRenderer && cellRenderer.call(me, group, cellEl, group.rendered || false) || true;
             }
         }
 
@@ -733,7 +731,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 cellEl = group.cellEl;
 
                 if (cellRenderer) {
-                    cellRenderer.call(me, group, cellEl);
+                    group.rendered = cellRenderer.call(me, group, cellEl, group.rendered || false) || true;
                 } else {
                     cellTpl.overwrite(cellEl, group);
                 }
