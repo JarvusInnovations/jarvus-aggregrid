@@ -1,6 +1,7 @@
 /**
  * TODO:
- * - [ ] Continuously update data cell renderings
+ * - [~] Continuously update data cell renderings
+ * - [ ] Continuously update rows
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
@@ -264,6 +265,16 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             i = 0, record, recordId, recordMetadata,
             row, column, rowId, columnId, group;
 
+        if (!me.gridReady) {
+            me.refresh();
+            return;
+        }
+
+        if (!me.groupsReady) {
+            me.aggregate();
+            return;
+        }
+
         for (; i < recordsLength; i++) {
             record = records[i];
             recordId = record.getId();
@@ -274,7 +285,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             if (!row || !column) {
                 Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
-                return;
+                continue;
             }
 
             // create metadata container for record indexed by its id
@@ -292,20 +303,31 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             recordMetadata.group = group;
             group.records.push(recordMetadata);
 
+            // mark group dirty
+            group.dirty = true;
+
             me.fireEvent('aggregatechange', me, 'add', recordMetadata);
         }
+
+        me.syncRenderedCells();
     },
 
     onDataStoreRemove: function(store, records) {
         var me = this,
             recordsMetadata = me.recordsMetadata,
             recordsLength = records.length,
-            i = 0, record, recordId, recordMetadata;
+            i = 0, record, recordId, recordMetadata, group;
 
         for (; i < recordsLength; i++) {
             record = records[i];
             recordId = record.getId();
             recordMetadata = recordsMetadata[recordId];
+
+            if (!recordMetadata) {
+                continue; // this record was not rendered into an aggregate group
+            }
+
+            group = recordMetadata.group;
 
             // remove from group
             Ext.Array.remove(recordMetadata.group.records, recordMetadata);
@@ -313,8 +335,13 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             // remove metadata
             delete recordsMetadata[recordId];
 
+            // mark group dirty
+            group.dirty = true;
+
             me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
         }
+
+        me.syncRenderedCells();
     },
 
     onDataStoreUpdate: function(store, record) {
@@ -355,7 +382,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         recordMetadata.group = group;
         group.records.push(recordMetadata);
 
+        // mark group dirty
+        group.dirty = true;
+
         me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
+
+        me.syncRenderedCells();
     },
 
     onClick: function(ev, target) {
@@ -543,6 +575,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         // READ->WRITE phase: sync row heights
         me.syncRowHeights();
 
+        me.gridReady = true;
+
         me.fireEvent('afterrefresh', me);
     },
 
@@ -635,6 +669,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             recordMetadata.group = group;
             group.records.push(recordMetadata);
         }
+
+        me.groupsReady = true;
     },
 
     doRenderCells: function(me) {
@@ -661,8 +697,48 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 }
 
                 if (cellRenderer) {
-                    cellRenderer.call(this, group, cellEl);
+                    cellRenderer.call(me, group, cellEl);
                 }
+            }
+        }
+
+        me.cellsRendered = true;
+    },
+
+    syncRenderedCells: function() {
+        var me = this,
+            aggregateGroups = me.aggregateGroups,
+            cellTpl = me.getCellTpl(),
+            cellRenderer = me.getCellRenderer(),
+            rowId, columns, columnId, group, cellEl;
+
+        if (!me.cellsRendered) {
+            return;
+        }
+
+        if (!cellTpl && !cellRenderer) {
+            return;
+        }
+
+        for (rowId in aggregateGroups) { // eslint-disable-line guard-for-in
+            columns = aggregateGroups[rowId];
+
+            for (columnId in columns) { // eslint-disable-line guard-for-in
+                group = columns[columnId];
+
+                if (!group.dirty) {
+                    continue;
+                }
+
+                cellEl = group.cellEl;
+
+                if (cellRenderer) {
+                    cellRenderer.call(me, group, cellEl);
+                } else {
+                    cellTpl.overwrite(cellEl, group);
+                }
+
+                group.dirty = false;
             }
         }
     },
