@@ -120,16 +120,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     // component lifecycle
     afterRender: function() {
-        var me = this;
-
-        me.callParent(arguments);
-
-        // chain rendering cells to aggregation with a slight delay
-        me.on('aggregate', function() {
-            me.fireEventedAction('rendercells', [me], 'doRenderCells', me);
-        }, me, { delay: 5 });
-
-        me.refresh();
+        this.callParent(arguments);
+        this.repaintGrid();
     },
 
 
@@ -142,12 +134,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this;
 
         if (oldStore) {
-            oldStore.un('datachanged', 'refresh', me);
+            oldStore.un('datachanged', 'refreshGrid', me);
         }
 
         if (store) {
-            me.refresh();
-            store.on('datachanged', 'refresh', me);
+            me.refreshGrid();
+            store.on('datachanged', 'refreshGrid', me);
         }
     },
 
@@ -159,12 +151,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this;
 
         if (oldStore) {
-            oldStore.un('datachanged', 'refresh', me);
+            oldStore.un('datachanged', 'refreshGrid', me);
         }
 
         if (store) {
-            me.refresh();
-            store.on('datachanged', 'refresh', me);
+            me.refreshGrid();
+            store.on('datachanged', 'refreshGrid', me);
         }
     },
 
@@ -245,149 +237,20 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // event handlers
-    onDataStoreLoad: function() {
-        // call aggregate if initial refresh has already populated tpl data
-        if (this.getData()) {
-            this.aggregate();
-        }
+    onDataStoreLoad: function(dataStore, records) {
+        this.groupRecords(records);
     },
 
     onDataStoreAdd: function(dataStore, records) {
-        var me = this,
-            recordsMetadata = me.recordsMetadata,
-            aggregateGroups = me.aggregateGroups,
-            rowsStore = me.getRowsStore(),
-            rowMapper = me.getRowMapper(),
-            columnsStore = me.getColumnsStore(),
-            columnMapper = me.getColumnMapper(),
-
-            recordsLength = records.length,
-            i = 0, record, recordId, recordMetadata,
-            row, column, rowId, columnId, group;
-
-        if (!me.gridReady) {
-            me.refresh();
-            return;
-        }
-
-        if (!me.groupsReady) {
-            me.aggregate();
-            return;
-        }
-
-        for (; i < recordsLength; i++) {
-            record = records[i];
-            recordId = record.getId();
-
-            // get target row and column for this record
-            row = rowMapper(record, rowsStore);
-            column = columnMapper(record, columnsStore);
-
-            if (!row || !column) {
-                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
-                continue;
-            }
-
-            // create metadata container for record indexed by its id
-            recordMetadata = recordsMetadata[recordId] = {
-                record: record,
-                row: row,
-                column: column
-            };
-
-            // push record to records array for group at [rowId][columnId]
-            rowId = row.getId();
-            columnId = column.getId();
-            group = aggregateGroups[rowId][columnId];
-
-            recordMetadata.group = group;
-            group.records.push(recordMetadata);
-
-            // mark group dirty
-            group.dirty = true;
-
-            me.fireEvent('aggregatechange', me, 'add', recordMetadata);
-        }
-
-        me.syncRenderedCells();
+        this.groupRecords(records);
     },
 
     onDataStoreRemove: function(store, records) {
-        var me = this,
-            recordsMetadata = me.recordsMetadata,
-            recordsLength = records.length,
-            i = 0, record, recordId, recordMetadata, group;
-
-        for (; i < recordsLength; i++) {
-            record = records[i];
-            recordId = record.getId();
-            recordMetadata = recordsMetadata[recordId];
-
-            if (!recordMetadata) {
-                continue; // this record was not rendered into an aggregate group
-            }
-
-            group = recordMetadata.group;
-
-            // remove from group
-            Ext.Array.remove(recordMetadata.group.records, recordMetadata);
-
-            // remove metadata
-            delete recordsMetadata[recordId];
-
-            // mark group dirty
-            group.dirty = true;
-
-            me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
-        }
-
-        me.syncRenderedCells();
+        this.ungroupRecords(records);
     },
 
-    onDataStoreUpdate: function(store, record) {
-        var me = this,
-            aggregateGroups = me.aggregateGroups,
-            rowsStore = me.getRowsStore(),
-            rowMapper = me.getRowMapper(),
-            columnsStore = me.getColumnsStore(),
-            columnMapper = me.getColumnMapper(),
-
-            recordId = record.getId(),
-            recordMetadata = me.recordsMetadata[recordId],
-            previousGroup = recordMetadata.group,
-            row, column, rowId, columnId, group;
-
-        // get updated target row and column for this record
-        row = rowMapper(record, rowsStore);
-        column = columnMapper(record, columnsStore);
-
-        if (!row || !column) {
-            Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
-            return;
-        }
-
-        // check if record needs to be moved to a new group
-        if (row === recordMetadata.row && column === recordMetadata.column) {
-            return;
-        }
-
-        // get new group
-        rowId = row.getId();
-        columnId = column.getId();
-        group = aggregateGroups[rowId][columnId];
-
-        // move record to new group
-        Ext.Array.remove(previousGroup.records, recordMetadata);
-        recordMetadata.previousGroup = previousGroup;
-        recordMetadata.group = group;
-        group.records.push(recordMetadata);
-
-        // mark group dirty
-        group.dirty = true;
-
-        me.fireEvent('aggregatechange', me, 'remove', recordMetadata);
-
-        me.syncRenderedCells();
+    onDataStoreUpdate: function(store, records) {
+        this.regroupRecords([records]);
     },
 
     onClick: function(ev, target) {
@@ -444,7 +307,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // component methods
-    refresh: Ext.Function.createBuffered(function() {
+    refreshGrid: Ext.Function.createBuffered(function() {
         var me = this,
             columnsStore = me.getColumnsStore(),
             rowsStore = me.getRowsStore();
@@ -456,29 +319,149 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             return;
         }
 
-        console.info('%s.refresh', this.getId());
+        console.info('%s.refreshgrid', this.getId());
 
-        me.fireEventedAction('refresh', [me], 'doRefresh', me);
+        me.fireEventedAction('refreshgrid', [me], 'doRefreshGrid', me);
+    }, 10),
+
+    /**
+     * @private
+     * Refresh the internal data structures for rows and columns
+     */
+    doRefreshGrid: function(me) {
+        console.info('%s.doRefreshGrid', this.getId());
+
+        var me = this,
+            groups = me.groups = {},
+
+            rowsStore = me.getRowsStore(),
+            rowsCount = rowsStore.getCount(),
+            rowIndex = 0, row, rowId, rowGroups,
+
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+            columnIndex, column, columnId,
+
+            dataStore = me.getDataStore();
+
+        me.gridPainted = false;
+
+        // initialize row x column groups map
+        for (; rowIndex < rowsCount; rowIndex++) {
+            row = rowsStore.getAt(rowIndex);
+            rowId = row.getId();
+            rowGroups = groups[rowId] = {};
+
+            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                column = columnsStore.getAt(columnIndex);
+                columnId = column.getId();
+
+                rowGroups[columnId] = {
+                    records: [],
+                    row: row,
+                    rowId: rowId,
+                    column: column,
+                    columnId: columnId
+                };
+            }
+        }
+
+        // reset expansion state
+        me.rowExpanded = {};
+
+        // reset grouped records by-id cache
+        me.groupedRecords = {};
+
+        // group any initial data records
+        if (dataStore && dataStore.getCount()) {
+            me.groupRecords(dataStore.getRange());
+        }
+
+        // repaint grid
+        if (me.rendered) {
+            me.repaintGrid();
+        }
+    },
+
+    repaintGrid: Ext.Function.createBuffered(function() {
+        var me = this;
+
+        if (!me.rendered) {
+            return;
+        }
+
+        console.info('%s.repaintgrid', this.getId());
+
+        me.fireEventedAction('repaintgrid', [me], 'doRepaintGrid', me);
     }, 10),
 
     /**
      * @private
      * Render the main scaffolding of the aggregrid by columns and rows
      */
-    doRefresh: function(me) {
-        console.info('%s.doRefresh', this.getId());
+    doRepaintGrid: function(me) {
+        console.info('%s.doRepaintGrid', this.getId());
+
+        var expandable = me.getExpandable(),
+            groups = me.groups,
+
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+            rowsStore = me.getRowsStore(),
+            rowsCount = rowsStore.getCount(),
+
+            rowEls = me.rowEls = {},
+            rowHeaderEls = me.rowHeaderEls = {},
+            rowExpanderEls = me.rowExpanderEls = {},
+            rowHeaderExpanderEls = me.rowHeaderExpanderEls = {},
+            columnHeaderEls = me.columnHeaderEls = {},
+            rowHeadersCt, columnHeadersCt, dataCellsCt,
+
+            rowIndex, row, rowId, rowEl, rowGroups,
+            columnIndex, column, columnId;
 
         // generate template data structure and execute against tpl
         me.setData(me.buildTplData());
 
-        // reset expansion state
-        me.rowExpanded = {};
+        // read top-level containers from dom
+        rowHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody');
+        columnHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead');
+        dataCellsCt = me.dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody');
 
-        // do stuff that needs to happen after each time the DOM is rebuilt
-        me.afterRefresh();
+        // READ phase: query dom to collect references to key elements
+        for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
+            row = rowsStore.getAt(rowIndex);
+            rowId = row.getId();
+            rowGroups = groups[rowId];
+            rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
-        // execute initial data aggregation if store is ready
-        me.aggregate();
+            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+            rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+            rowHeaderExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+
+            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                column = columnsStore.getAt(columnIndex);
+                columnId = column.getId();
+
+                columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+
+                rowGroups[columnId].cellEl = rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+            }
+        }
+
+        for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+            columnId = columnsStore.getAt(columnIndex).getId();
+            columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+        }
+
+        // READ->WRITE phase: sync row heights
+        me.syncRowHeights();
+
+        me.gridPainted = true;
+
+        // repaint data
+        me.repaintData();
     },
 
     buildTplData: function() {
@@ -514,72 +497,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return data;
     },
 
-    afterRefresh: function() {
-        console.info('%s.afterRefresh', this.getId());
-
-        var me = this,
-            expandable = me.getExpandable(),
-            rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody'),
-            columnHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead'),
-            dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody'),
-
-            columnsStore = me.getColumnsStore(),
-            columnsCount = columnsStore.getCount(),
-            rowsStore = me.getRowsStore(),
-            rowsCount = rowsStore.getCount(),
-
-            rowEls = me.rowEls = {},
-            rowHeaderEls = me.rowHeaderEls = {},
-            rowExpanderEls = me.rowExpanderEls = {},
-            rowHeaderExpanderEls = me.rowHeaderExpanderEls = {},
-            columnHeaderEls = me.columnHeaderEls = {},
-            aggregateGroups = me.aggregateGroups = {},
-
-            rowIndex, row, rowId, rowEl, rowGroups,
-            columnIndex, column, columnId;
-
-        // READ phase: query dom to collect references to key elements
-        for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
-            row = rowsStore.getAt(rowIndex);
-            rowId = row.getId();
-            rowGroups = aggregateGroups[rowId] = {};
-            rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-
-            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-
-            rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-            rowHeaderExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-
-            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                column = columnsStore.getAt(columnIndex);
-                columnId = column.getId();
-
-                columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
-
-                rowGroups[columnId] = {
-                    records: [],
-                    cellEl: rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]'),
-                    row: row,
-                    rowId: rowId,
-                    column: column,
-                    columnId: columnId
-                };
-            }
-        }
-
-        for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-            columnId = columnsStore.getAt(columnIndex).getId();
-            columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
-        }
-
-        // READ->WRITE phase: sync row heights
-        me.syncRowHeights();
-
-        me.gridReady = true;
-
-        me.fireEvent('afterrefresh', me);
-    },
-
     /**
      * @public
      * Synchronizes the heights of rows between the headers and data tables
@@ -607,44 +524,26 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         });
     },
 
-    /**
-     * Triggers a complete rebuild of aggregateGroups structure
-     */
-    aggregate: function() {
+    groupRecords: function(records) {
         var me = this,
-            store = me.getDataStore();
-
-        if (!store || !store.isLoaded()) {
-            return;
-        }
-
-        console.info('%s.aggregate', this.getId());
-
-        me.fireEventedAction('aggregate', [me], 'doAggregate', me);
-    },
-
-    /**
-     * @private
-     * Generate the full aggregateGroups structure and flush to DOM
-     */
-    doAggregate: function(me) {
-        console.info('%s.doAggregate', this.getId());
-
-        var aggregateGroups = me.aggregateGroups,
-            recordsMetadata = me.recordsMetadata = {},
+            groups = me.groups,
+            groupedRecords = me.groupedRecords,
 
             rowsStore = me.getRowsStore(),
             rowMapper = me.getRowMapper(),
             columnsStore = me.getColumnsStore(),
             columnMapper = me.getColumnMapper(),
-            dataStore = me.getDataStore(),
 
-            recordsCount = dataStore.getCount(),
-            recordIndex = 0, record, recordId, recordMetadata,
-            row, column, group;
+            recordsLength = records.length,
+            i = 0, record, recordId, recordGroupData,
+            row, column, rowId, columnId, group;
 
-        for (; recordIndex < recordsCount; recordIndex++) {
-            record = dataStore.getAt(recordIndex);
+        if (!groupedRecords) {
+            return;
+        }
+
+        for (; i < recordsLength; i++) {
+            record = records[i];
             recordId = record.getId();
 
             // get target row and column for this record
@@ -657,88 +556,170 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
 
             // create metadata container for record indexed by its id
-            recordMetadata = recordsMetadata[recordId] = {
+            recordGroupData = groupedRecords[recordId] = {
                 record: record,
                 row: row,
                 column: column
             };
 
             // push record to records array for group at [rowId][columnId]
-            group = aggregateGroups[row.getId()][column.getId()];
+            rowId = row.getId();
+            columnId = column.getId();
+            group = groups[rowId][columnId];
 
-            recordMetadata.group = group;
-            group.records.push(recordMetadata);
+            recordGroupData.group = group;
+            group.records.push(recordGroupData);
+
+            // mark group dirty
+            group.dirty = true;
+
+            me.fireEvent('recordgrouped', me, recordGroupData, group);
         }
 
-        me.groupsReady = true;
+        me.repaintData();
     },
 
-    doRenderCells: function(me) {
-        console.info('%s.doRenderCells', this.getId());
+    ungroupRecords: function(records) {
+        var me = this,
+            groupedRecords = me.groupedRecords,
+            recordsLength = records.length,
+            i = 0, record, recordId, recordGroupData, group;
 
-        var aggregateGroups = me.aggregateGroups,
+        if (!groupedRecords) {
+            return;
+        }
+
+        for (; i < recordsLength; i++) {
+            record = records[i];
+            recordId = record.getId();
+            recordGroupData = groupedRecords[recordId];
+
+            if (!recordGroupData) {
+                continue; // this record was not rendered into a group
+            }
+
+            group = recordGroupData.group;
+
+            // remove from group
+            Ext.Array.remove(recordGroupData.group.records, recordGroupData);
+            delete recordGroupData.group;
+
+            // remove metadata
+            delete groupedRecords[recordId];
+
+            // mark group dirty
+            group.dirty = true;
+
+            me.fireEvent('recordungrouped', me, recordGroupData, group);
+        }
+
+        me.repaintData();
+    },
+
+    regroupRecords: function(records) {
+        var me = this,
+            groups = me.groups,
+            groupedRecords = me.groupedRecords,
+
+            rowsStore = me.getRowsStore(),
+            rowMapper = me.getRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+
+            recordsLength = records.length,
+            i = 0, record, recordId, recordGroupData, previousGroup,
+            row, column, rowId, columnId, group;
+
+        if (!groupedRecords) {
+            return;
+        }
+
+        for (; i < recordsLength; i++) {
+            record = records[i];
+            recordId = record.getId();
+            recordGroupData = groupedRecords[recordId];
+            previousGroup = recordGroupData.group;
+
+            // get updated target row and column for this record
+            row = rowMapper(record, rowsStore);
+            column = columnMapper(record, columnsStore);
+
+            if (!row || !column) {
+                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+                return;
+            }
+
+            // check if record needs to be moved to a new group
+            if (row === recordGroupData.row && column === recordGroupData.column) {
+                return;
+            }
+
+            // get new group
+            rowId = row.getId();
+            columnId = column.getId();
+            group = groups[rowId][columnId];
+
+            // move record to new group
+            Ext.Array.remove(previousGroup.records, recordGroupData);
+            recordGroupData.previousGroup = previousGroup;
+            recordGroupData.group = group;
+            group.records.push(recordGroupData);
+
+            // mark group dirty
+            group.dirty = true;
+
+            me.fireEvent('recordregrouped', me, recordGroupData, group, previousGroup);
+        }
+
+        me.repaintData();
+    },
+
+    repaintData: Ext.Function.createBuffered(function() {
+        var me = this;
+
+        if (!me.gridPainted) {
+            return;
+        }
+
+        console.info('%s.repaintdata', this.getId());
+
+        me.fireEventedAction('repaintdata', [me], 'doRepaintData', me);
+    }, 10),
+
+    doRepaintData: function(me) {
+        console.info('%s.doRepaintData', this.getId());
+
+        var groups = me.groups,
             cellTpl = me.getCellTpl(),
             cellRenderer = me.getCellRenderer(),
-            rowId, columns, columnId, group, cellEl;
+            rowId, columns, columnId, group, cellEl, rendered, dirty;
 
         if (!cellTpl && !cellRenderer) {
             return;
         }
 
-        for (rowId in aggregateGroups) { // eslint-disable-line guard-for-in
-            columns = aggregateGroups[rowId];
+        for (rowId in groups) { // eslint-disable-line guard-for-in
+            columns = groups[rowId];
 
             for (columnId in columns) { // eslint-disable-line guard-for-in
                 group = columns[columnId];
                 cellEl = group.cellEl;
+                rendered = group.rendered;
+                dirty = group.dirty
 
-                if (cellTpl) {
-                    cellTpl.overwrite(cellEl, group);
+                // apply cellTpl if this is the first render OR there's no cellRenderer and the group is dirty
+                if (!rendered || (!cellRenderer && dirty)) {
+                    group.tplNode = cellTpl && cellTpl.overwrite(cellEl, group);
                 }
 
-                group.rendered = cellRenderer && cellRenderer.call(me, group, cellEl, group.rendered || false) || true;
+                if (!rendered || dirty) {
+                    group.rendered = cellRenderer && cellRenderer.call(me, group, cellEl, rendered || false) || true;
+                    group.dirty = false;
+                }
             }
         }
 
         me.cellsRendered = true;
-    },
-
-    syncRenderedCells: function() {
-        var me = this,
-            aggregateGroups = me.aggregateGroups,
-            cellTpl = me.getCellTpl(),
-            cellRenderer = me.getCellRenderer(),
-            rowId, columns, columnId, group, cellEl;
-
-        if (!me.cellsRendered) {
-            return;
-        }
-
-        if (!cellTpl && !cellRenderer) {
-            return;
-        }
-
-        for (rowId in aggregateGroups) { // eslint-disable-line guard-for-in
-            columns = aggregateGroups[rowId];
-
-            for (columnId in columns) { // eslint-disable-line guard-for-in
-                group = columns[columnId];
-
-                if (!group.dirty) {
-                    continue;
-                }
-
-                cellEl = group.cellEl;
-
-                if (cellRenderer) {
-                    group.rendered = cellRenderer.call(me, group, cellEl, group.rendered || false) || true;
-                } else {
-                    cellTpl.overwrite(cellEl, group);
-                }
-
-                group.dirty = false;
-            }
-        }
     },
 
     doExpand: function(me, rowId) {
