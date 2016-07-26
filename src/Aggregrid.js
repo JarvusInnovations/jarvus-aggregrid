@@ -292,7 +292,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.fireEvent('rowheaderclick', this, rowId, el, ev);
 
         if (me.getExpandable()) {
-            isExpand = !me.rowExpanded[rowId];
+            isExpand = !me.rowsExpanded[rowId];
             me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
         }
     },
@@ -370,7 +370,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         // reset expansion state
-        me.rowExpanded = {};
+        me.rowsExpanded = {};
 
         // reset grouped records by-id cache
         me.groupedRecords = {};
@@ -738,14 +738,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     doExpand: function(me, rowId) {
-        me.rowExpanded[rowId] = true;
+        me.rowsExpanded[rowId] = true;
         me.syncExpanderHeight(rowId);
         me.rowEls[rowId].addCls('is-expanded');
         me.rowHeaderEls[rowId].addCls('is-expanded');
     },
 
     doCollapse: function(me, rowId) {
-        me.rowExpanded[rowId] = false;
+        me.rowsExpanded[rowId] = false;
         me.rowHeaderExpanderEls[rowId].setHeight(0);
         me.rowExpanderEls[rowId].setHeight(0);
         me.rowEls[rowId].removeCls('is-expanded');
