@@ -307,10 +307,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // component methods
-    refreshGrid: Ext.Function.createBuffered(function() {
+    refreshGrid: function() {
         var me = this,
             columnsStore = me.getColumnsStore(),
-            rowsStore = me.getRowsStore();
+            rowsStore = me.getRowsStore(),
+            bufferedRefreshGrid = me.bufferedRefreshGrid;
 
         if (
             !columnsStore || !rowsStore
@@ -319,10 +320,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             return;
         }
 
-        console.info('%s.refreshgrid', this.getId());
+        if (!bufferedRefreshGrid) {
+            bufferedRefreshGrid = me.bufferedRefreshGrid = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['refreshgrid', [me], 'doRefreshGrid', me]);
+        }
 
-        me.fireEventedAction('refreshgrid', [me], 'doRefreshGrid', me);
-    }, 10),
+        bufferedRefreshGrid();
+    },
 
     /**
      * @private
@@ -383,17 +386,15 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    repaintGrid: Ext.Function.createBuffered(function() {
+    repaintGrid: function() {
         var me = this;
 
-        if (!me.rendered) {
+        if (!me.groups || !me.rendered) {
             return;
         }
 
-        console.info('%s.repaintgrid', this.getId());
-
         me.fireEventedAction('repaintgrid', [me], 'doRepaintGrid', me);
-    }, 10),
+    },
 
     /**
      * @private
@@ -674,17 +675,20 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.repaintData();
     },
 
-    repaintData: Ext.Function.createBuffered(function() {
-        var me = this;
+    repaintData: function() {
+        var me = this,
+            bufferedRepaintData = me.bufferedRepaintData;
 
         if (!me.gridPainted) {
             return;
         }
 
-        console.info('%s.repaintdata', this.getId());
+        if (!bufferedRepaintData) {
+            bufferedRepaintData = me.bufferedRepaintData = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['repaintdata', [me], 'doRepaintData', me]);
+        }
 
-        me.fireEventedAction('repaintdata', [me], 'doRepaintData', me);
-    }, 10),
+        bufferedRepaintData();
+    },
 
     doRepaintData: function(me) {
         console.info('%s.doRepaintData', this.getId());
