@@ -629,7 +629,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             recordsLength = records.length,
             i = 0, record, recordId, recordGroupData, previousGroup,
-            row, column, rowId, columnId, group;
+            row, column, rowId, columnId, group,
+            ungroupedRecords = [];
 
         if (!groupedRecords) {
             return;
@@ -639,6 +640,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             record = records[i];
             recordId = record.getId();
             recordGroupData = groupedRecords[recordId];
+
+            if (!recordGroupData) {
+                ungroupedRecords.push(record);
+                continue;
+            }
+
             previousGroup = recordGroupData.group;
 
             // get updated target row and column for this record
@@ -670,6 +677,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             group.dirty = true;
 
             me.fireEvent('recordregrouped', me, recordGroupData, group, previousGroup);
+        }
+
+        if (ungroupedRecords.length) {
+            me.groupRecords(ungroupedRecords);
         }
 
         me.repaintData();
