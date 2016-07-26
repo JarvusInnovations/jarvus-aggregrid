@@ -424,7 +424,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         // read top-level containers from dom
         rowHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody');
-        columnHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead');
+        columnHeadersCt = me.columnHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead');
         dataCellsCt = me.dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody');
 
         // READ phase: query dom to collect references to key elements
