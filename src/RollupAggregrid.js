@@ -1,5 +1,6 @@
 /**
  * TODO:
+ * - [ ] Apply refined lifecycle from Aggregrid
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
  * - [ ] Continuously update subrow data cell renderings
  *
