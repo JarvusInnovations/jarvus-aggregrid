@@ -299,7 +299,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 column = columnsStore.getAt(columnIndex);
                 columnId = column.getId();
 
-                group = subRowGroups[columnId] || (subRowGroups[columnId] = { records: [] });
+                group = subRowGroups[columnId] || (subRowGroups[columnId] = {});
                 group.cellEl = subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
                 group.row = subRow;
                 group.subRowId = subRowId;
@@ -370,7 +370,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             columnMapper = me.getColumnMapper(),
             subRecordsCount = subDataStore.getCount(),
             subRecordIndex = 0, subRecord, subRecordId, parentSubMetadata, subRecordMetadata,
-            subRow, subRowId, parentRow, column, columnId, group;
+            subRow, subRowId, parentRow, column, columnId, group, groupRecords;
 
         for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
             subRecord = subDataStore.getAt(subRecordIndex);
@@ -402,10 +402,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             group = group[subRowId] || (group[subRowId] = {});
 
             columnId = column.getId();
-            group = group[columnId] || (group[columnId] = { records: [] });
+            group = group[columnId] || (group[columnId] = {});
+            groupRecords = group.records || (group.records = []);
 
             subRecordMetadata.group = group;
-            group.records.push(subRecordMetadata);
+            groupRecords.push(subRecordMetadata);
         }
     },
 
