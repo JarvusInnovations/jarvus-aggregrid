@@ -732,7 +732,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
         }
 
-        me.cellsRendered = true;
+        me.cellsPainted = true;
     },
 
     doExpand: function(me, rowId) {
