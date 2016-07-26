@@ -381,9 +381,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         // repaint grid
-        if (me.rendered) {
-            me.repaintGrid();
-        }
+        me.repaintGrid();
     },
 
     repaintGrid: function() {
