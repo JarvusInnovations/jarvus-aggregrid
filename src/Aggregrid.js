@@ -253,7 +253,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     onDataStoreUpdate: function(store, records) {
-        this.regroupRecords([records]);
+        this.regroupRecords([records], false);
+        this.invalidateRecordGroups([records]);
     },
 
     onClick: function(ev, target) {
@@ -526,7 +527,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         });
     },
 
-    groupRecords: function(records) {
+    groupRecords: function(records, repaint) {
         var me = this,
             groups = me.groups,
             groupedRecords = me.groupedRecords,
@@ -578,10 +579,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             me.fireEvent('recordgrouped', me, recordGroupData, group);
         }
 
-        me.repaintData();
+        if (repaint !== false) {
+            me.repaintData();
+        }
     },
 
-    ungroupRecords: function(records) {
+    ungroupRecords: function(records, repaint) {
         var me = this,
             groupedRecords = me.groupedRecords,
             recordsLength = records.length,
@@ -615,10 +618,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             me.fireEvent('recordungrouped', me, recordGroupData, group);
         }
 
-        me.repaintData();
+        if (repaint !== false) {
+            me.repaintData();
+        }
     },
 
-    regroupRecords: function(records) {
+    regroupRecords: function(records, repaint) {
         var me = this,
             groups = me.groups,
             groupedRecords = me.groupedRecords,
@@ -685,7 +690,33 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             me.groupRecords(ungroupedRecords);
         }
 
-        me.repaintData();
+        if (repaint !== false) {
+            me.repaintData();
+        }
+    },
+
+    invalidateRecordGroups: function(records, repaint) {
+        var me = this,
+            groupedRecords = me.groupedRecords,
+
+            recordsLength = records.length,
+            i = 0, recordGroupData;
+
+        if (!groupedRecords) {
+            return;
+        }
+
+        for (; i < recordsLength; i++) {
+            recordGroupData = groupedRecords[records[i].getId()];
+
+            if (recordGroupData) {
+                recordGroupData.group.dirty = true;
+            }
+        }
+
+        if (repaint !== false) {
+            me.repaintData();
+        }
     },
 
     repaintData: function() {
