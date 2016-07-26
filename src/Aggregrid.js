@@ -1,5 +1,8 @@
 /**
- * TODO:
+ * ## Lifecycle
+ * See https://docs.google.com/drawings/d/1zOGHU8kRRCXe4SwyS6UOtjKA7cvWaWJ4t9BS-wWbyLU/edit?usp=sharing
+ *
+ * ## TODO
  * - [~] Continuously update data cell renderings
  * - [ ] Continuously update rows
  */
