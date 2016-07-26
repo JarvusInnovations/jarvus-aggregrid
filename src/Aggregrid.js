@@ -674,8 +674,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             recordGroupData.group = group;
             group.records.push(recordGroupData);
 
-            // mark group dirty
+            // mark both groups dirty
             group.dirty = true;
+            previousGroup.dirty = true;
 
             me.fireEvent('recordregrouped', me, recordGroupData, group, previousGroup);
         }
