@@ -22,7 +22,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subRowHeaderField: 'title',
         subRowHeaderTpl: false,
 
-        subCellTpl: '{records.length}',
+        subCellTpl: '{[values.records && values.records.length || 0]}',
         subCellRenderer: false,
 
         expandable: true,
