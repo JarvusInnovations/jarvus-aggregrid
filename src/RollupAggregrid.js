@@ -1,7 +1,7 @@
 /**
  * TODO:
  * - [ ] Apply refined lifecycle from Aggregrid
- *      - [ ] repaintSubgrid -> repaintData
+ *      - [ ] repaintSubGrid -> repaintSubCells
  *      - [ ] new rendering flow
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
  * - [ ] Continuously update subrow data cell renderings
@@ -189,7 +189,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var rollupRow = me.rollupRows[rowId],
             expanderTplData = me.buildExpanderTplData(rowId);
 
-        if (!rollupRow.cellsRendered) {
+        if (!rollupRow.cellsPainted) {
             rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
             rollupRow.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
 
@@ -197,7 +197,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             me.aggregateSubRows(rowId);
 
-            me.fireEventedAction('rendersubcells', [me, rowId], 'doRenderSubCells', me);
+            me.fireEventedAction('repaintsubcells', [me, rowId], 'doRepaintSubCells', me);
         }
 
         me.callParent(arguments);
@@ -416,8 +416,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
     },
 
-    doRenderSubCells: function(me, rowId) {
-        console.info('%s.doRenderSubCells(%o)', this.getId(), rowId);
+    doRepaintSubCells: function(me, rowId) {
+        console.info('%s.doRepaintSubCells(%o)', this.getId(), rowId);
 
         var rollupRow = me.rollupRows[rowId],
             groups = rollupRow.groups,
@@ -429,7 +429,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             return;
         }
 
-        rollupRow.cellsRendered = true;
+        rollupRow.cellsPainted = true;
 
         for (subRowId in groups) { // eslint-disable-line guard-for-in
             columns = groups[subRowId];
