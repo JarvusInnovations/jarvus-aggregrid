@@ -358,6 +358,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doAggregateSubRows: function(me) {
+
+        // guard against additional runs here rather than in aggregateSubRows(), child classes
+        // may provide different implementations that use the rowId parameter to load rows individually
         if (me.subRecordsMetadata) {
             return;
         }
