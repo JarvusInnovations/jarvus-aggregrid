@@ -197,7 +197,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             me.aggregateSubRows(rowId);
 
-            me.fireEventedAction('repaintsubcells', [me, rowId], 'doRepaintSubCells', me);
+            me.repaintSubCells(rowId);
         }
 
         me.callParent(arguments);
@@ -416,6 +416,18 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
     },
 
+    repaintSubCells: function(rowId) {
+        var me = this,
+            bufferedRepaintSubCells = me.bufferedRepaintSubCells || (me.bufferedRepaintSubCells = {}),
+            repaint = bufferedRepaintSubCells[rowId];
+
+        if (!repaint) {
+            repaint = bufferedRepaintSubCells[rowId] = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['repaintsubcells', [me, rowId], 'doRepaintSubCells', me]);
+        }
+
+        repaint();
+    },
+
     doRepaintSubCells: function(me, rowId) {
         console.info('%s.doRepaintSubCells(%o)', this.getId(), rowId);
 
@@ -423,7 +435,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             groups = rollupRow.groups,
             subCellTpl = me.getSubCellTpl(),
             subCellRenderer = me.getSubCellRenderer(),
-            subRowId, columns, columnId, group, cellEl;
+            subRowId, columns, columnId, group, cellEl, rendered, dirty;
 
         if (!subCellTpl && !subCellRenderer) {
             return;
@@ -437,13 +449,17 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             for (columnId in columns) { // eslint-disable-line guard-for-in
                 group = columns[columnId];
                 cellEl = group.cellEl;
+                rendered = group.rendered;
+                dirty = group.dirty;
 
-                if (subCellTpl) {
-                    subCellTpl.overwrite(cellEl, group);
+                // apply cellTpl if this is the first render OR there's no cellRenderer and the group is dirty
+                if (!rendered || (!subCellRenderer && dirty)) {
+                    group.tplNode = subCellTpl && subCellTpl.overwrite(cellEl, group);
                 }
 
-                if (subCellRenderer) {
-                    subCellRenderer.call(this, group, cellEl);
+                if (!rendered || dirty) {
+                    group.rendered = subCellRenderer && subCellRenderer.call(me, group, cellEl, rendered || false) || true;
+                    group.dirty = false;
                 }
             }
         }
