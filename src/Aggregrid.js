@@ -464,7 +464,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.gridPainted = true;
 
         // repaint data
-        me.repaintData();
+        me.repaintCells();
     },
 
     buildTplData: function() {
@@ -580,7 +580,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (repaint !== false) {
-            me.repaintData();
+            me.repaintCells();
         }
     },
 
@@ -619,7 +619,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (repaint !== false) {
-            me.repaintData();
+            me.repaintCells();
         }
     },
 
@@ -691,7 +691,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (repaint !== false) {
-            me.repaintData();
+            me.repaintCells();
         }
     },
 
@@ -715,27 +715,27 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (repaint !== false) {
-            me.repaintData();
+            me.repaintCells();
         }
     },
 
-    repaintData: function() {
+    repaintCells: function() {
         var me = this,
-            bufferedRepaintData = me.bufferedRepaintData;
+            bufferedRepaintCells = me.bufferedRepaintCells;
 
         if (!me.gridPainted) {
             return;
         }
 
-        if (!bufferedRepaintData) {
-            bufferedRepaintData = me.bufferedRepaintData = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['repaintdata', [me], 'doRepaintData', me]);
+        if (!bufferedRepaintCells) {
+            bufferedRepaintCells = me.bufferedRepaintCells = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['repaintcells', [me], 'doRepaintCells', me]);
         }
 
-        bufferedRepaintData();
+        bufferedRepaintCells();
     },
 
-    doRepaintData: function(me) {
-        console.info('%s.doRepaintData', this.getId());
+    doRepaintCells: function(me) {
+        console.info('%s.doRepaintCells', this.getId());
 
         var groups = me.groups,
             cellTpl = me.getCellTpl(),
