@@ -159,7 +159,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     // component methods
-    doRefresh: function(me) {
+    doRefreshGrid: function(me) {
         var rowsSubMetadata = me.rowsSubMetadata = {},
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
