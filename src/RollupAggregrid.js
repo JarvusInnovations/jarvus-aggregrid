@@ -1,6 +1,8 @@
 /**
  * TODO:
  * - [ ] Apply refined lifecycle from Aggregrid
+ *      - [ ] repaintSubgrid -> repaintData
+ *      - [ ] new rendering flow
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
  * - [ ] Continuously update subrow data cell renderings
  *
