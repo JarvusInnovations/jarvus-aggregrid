@@ -203,6 +203,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             };
         }
 
+        // reset subRow parents cache
+        delete me.subRowParents;
+
         // reset grouped records by-id cache
         me.groupedSubRecords = {};
 
