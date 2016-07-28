@@ -439,6 +439,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             // mark parent row for repaint
             repaintRows[parentRowId] = true;
+
+            me.fireEvent('subrecordgrouped', me, subRecordGroupData, group);
         }
 
         if (repaint !== false) {
