@@ -151,15 +151,22 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     updateRowsStore: function(store, oldStore) {
-        var me = this;
+        var me = this,
+            listeners = {
+                scope: me,
+                load: 'onRowsStoreLoad',
+                add: 'onRowsStoreAdd',
+                remove: 'onRowsStoreRemove',
+                update: 'onRowsStoreUpdate'
+            };
 
         if (oldStore) {
-            oldStore.un('datachanged', 'refreshGrid', me);
+            oldStore.un(listeners);
         }
 
         if (store) {
             me.refreshGrid();
-            store.on('datachanged', 'refreshGrid', me);
+            store.on(listeners);
         }
     },
 
@@ -240,6 +247,22 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // event handlers
+    onRowsStoreLoad: function(rowsStore, rows) {
+        this.refreshGrid();
+    },
+
+    onRowsStoreAdd: function(rowsStore, rows) {
+        this.refreshGrid();
+    },
+
+    onRowsStoreRemove: function(rowsStore, rows) {
+        this.refreshGrid();
+    },
+
+    onRowsStoreUpdate: function(rowsStore, rows) {
+        this.refreshGrid();
+    },
+
     onDataStoreLoad: function(dataStore, records) {
         this.groupRecords(records);
     },
