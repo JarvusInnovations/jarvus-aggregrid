@@ -213,7 +213,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         if (subDataStore && subDataStore.getCount()) {
             me.groupSubRecords(subDataStore.getRange());
         }
-
     },
 
     doExpand: function(me, rowId) {
