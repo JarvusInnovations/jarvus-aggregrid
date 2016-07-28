@@ -393,6 +393,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             subRow, subRowId, parentRow, parentRowId, column, columnId, group, groupRecords,
             repaintRows = {};
 
+        if (!groupedSubRecords) {
+            return;
+        }
+
         for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
             subRecord = subRecords[subRecordIndex];
             subRecordId = subRecord.getId();
