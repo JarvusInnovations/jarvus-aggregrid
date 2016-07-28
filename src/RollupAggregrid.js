@@ -394,7 +394,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             repaintRows = {};
 
         if (!groupedSubRecords) {
-            return;
+            return repaintRows;
         }
 
         for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
@@ -449,6 +449,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 }
             }
         }
+
+        return repaintRows;
     },
 
     ungroupSubRecords: function(subRecords, repaint) {
@@ -460,7 +462,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             repaintRows = {}, parentRowId;
 
         if (!groupedSubRecords) {
-            return;
+            return repaintRows;
         }
 
         for (; i < subRecordsLength; i++) {
@@ -497,6 +499,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 }
             }
         }
+
+        return repaintRows;
     },
 
     regroupSubRecords: function(subRecords, repaint) {
@@ -516,7 +520,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             ungroupedSubRecords = [];
 
         if (!groupedSubRecords) {
-            return;
+            return repaintRows;
         }
 
         for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
@@ -579,7 +583,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         if (ungroupedSubRecords.length) {
-            me.groupRecords(ungroupedSubRecords, false);
+            Ext.apply(repaintRows, me.groupSubRecords(ungroupedSubRecords, false));
         }
 
         if (repaint !== false) {
@@ -589,6 +593,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 }
             }
         }
+
+        return repaintRows;
     },
 
     invalidateSubRecordGroups: function(subRecords, repaint) {
@@ -601,7 +607,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             repaintRows = {}, parentRowId;
 
         if (!groupedSubRecords) {
-            return;
+            return repaintRows;
         }
 
         for (; i < subRecordsLength; i++) {
@@ -624,6 +630,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 }
             }
         }
+
+        return repaintRows;
     },
 
     repaintSubCells: function(rowId) {
