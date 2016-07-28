@@ -452,8 +452,52 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
     },
 
-    ungroupSubRecords: function(records, repaint) {
-        // TODO: keep track of what rollupRows have been dirtied and repaint the ones with .cellsPainted unless repaint === false
+    ungroupSubRecords: function(subRecords, repaint) {
+        var me = this,
+            rollupRows = me.rollupRows,
+            groupedSubRecords = me.groupedSubRecords,
+            subRecordsLength = subRecords.length,
+            i = 0, subRecord, subRecordId, subRecordGroupData, group,
+            repaintRows = {}, parentRowId;
+
+        if (!groupedSubRecords) {
+            return;
+        }
+
+        for (; i < subRecordsLength; i++) {
+            subRecord = subRecords[i];
+            subRecordId = subRecord.getId();
+            subRecordGroupData = groupedSubRecords[subRecordId];
+
+            if (!subRecordGroupData) {
+                continue; // this record was not rendered into a group
+            }
+
+            group = subRecordGroupData.group;
+
+            // remove from group
+            Ext.Array.remove(subRecordGroupData.group.records, subRecordGroupData);
+            delete subRecordGroupData.group;
+
+            // remove metadata
+            delete groupedSubRecords[subRecordId];
+
+            // mark group dirty
+            group.dirty = true;
+
+            // mark parent row for repaint
+            repaintRows[subRecordGroupData.parentRow.getId()] = true;
+
+            me.fireEvent('subrecordungrouped', me, subRecordGroupData, group);
+        }
+
+        if (repaint !== false) {
+            for (parentRowId in repaintRows) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubCells(parentRowId);
+                }
+            }
+        }
     },
 
     regroupSubRecords: function(records, repaint) {
