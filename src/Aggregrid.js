@@ -668,6 +668,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 continue;
             }
 
+            // update row and column
+            recordGroupData.row = row;
+            recordGroupData.column = column;
+
             // get new group
             rowId = row.getId();
             columnId = column.getId();
