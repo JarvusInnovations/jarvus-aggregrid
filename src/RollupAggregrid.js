@@ -3,10 +3,11 @@
  * - [X] Apply refined lifecycle from Aggregrid
  *      - [X] repaintSubGrid -> repaintSubCells
  *      - [X] new rendering flow
- * - [ ] Continuously update aggregate subRow groups after initial aggregation
+ * - [X] Continuously update aggregate subRow groups after initial aggregation
  *      - [X] Eliminate aggregate function in favor of groupSubRecords()
- *      - [ ] Implement regroupSubRecords and ungroupSubRecords, wire to store events
- * - [ ] Continuously update subrow data cell renderings
+ *      - [X] Implement regroupSubRecords and ungroupSubRecords, wire to store events
+ * - [X] Continuously update subrow data cell renderings
+ * - [ ] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
  *
  * MAYBEDO:
  * - [ ] Move some of expander lifecycle up to base class
@@ -314,7 +315,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return data;
     },
 
-    // TODO: do this on on ongoing basis in response to rowsStore events
     groupSubRows: function() {
         if (this.subRowParents) {
             return;
