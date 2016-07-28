@@ -215,14 +215,20 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     doExpand: function(me, rowId) {
         console.info('%s.doExpand(%o)', me.getId(), rowId);
-        me.repaintSubGrid(rowId);
+
+        var rollupRow = me.rollupRows[rowId];
+
+        if (rollupRow && !rollupRow.gridPainted) {
+            me.repaintSubGrid(rowId);
+        }
+
         me.callParent(arguments);
     },
 
     // RollupAggregrid methods
     repaintSubGrid: function(rowId) {
         var me = this,
-            rollupRow = (me.rollupRows||{})[rowId];
+            rollupRow = me.rollupRows[rowId];
 
         if (!rollupRow || !rollupRow.groups) {
             return;
@@ -232,6 +238,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doRepaintSubGrid: function(me, rowId) {
+        console.info('%s.doRepaintSubGrid(%o)', this.getId(), rowId);
+
         var rollupRow = me.rollupRows[rowId],
             groups = rollupRow.groups,
             expanderTplData = me.buildExpanderTplData(rowId),
