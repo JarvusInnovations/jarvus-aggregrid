@@ -389,7 +389,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             columnMapper = me.getColumnMapper(),
 
             subRecordsCount = subRecords.length,
-            subRecordIndex = 0, subRecord, subRecordId, parentRollupRow, subRecordGroupData,
+            subRecordIndex = 0, subRecord, subRecordId, subRecordGroupData,
             subRow, subRowId, parentRow, parentRowId, column, columnId, group, groupRecords,
             repaintRows = {};
 
@@ -421,8 +421,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             // push record to records array for group at [rowId][columnId]
             parentRowId = parentRow.getId();
-            parentRollupRow = rollupRows[parentRowId];
-            group = parentRollupRow.groups;
+            group = rollupRows[parentRowId].groups;
 
             subRowId = subRow.getId();
             group = group[subRowId] || (group[subRowId] = {});
@@ -500,32 +499,131 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
     },
 
-    regroupSubRecords: function(records, repaint) {
-        // TODO: keep track of what rollupRows have been dirtied and repaint the ones with .cellsPainted unless repaint === false
+    regroupSubRecords: function(subRecords, repaint) {
+        var me = this,
+            rollupRows = me.rollupRows,
+            groupedSubRecords = me.groupedSubRecords,
+
+            subRowsStore = me.getSubRowsStore(),
+            subRowMapper = me.getSubRowMapper(),
+            columnsStore = me.getColumnsStore(),
+            columnMapper = me.getColumnMapper(),
+
+            subRecordsCount = subRecords.length,
+            subRecordIndex = 0, subRecord, subRecordId, subRecordGroupData, previousGroup,
+            subRow, subRowId, parentRow, parentRowId, column, columnId, group, groupRecords,
+            repaintRows = {},
+            ungroupedSubRecords = [];
+
+        if (!groupedSubRecords) {
+            return;
+        }
+
+        for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
+            subRecord = subRecords[subRecordIndex];
+            subRecordId = subRecord.getId();
+            subRecordGroupData = groupedSubRecords[subRecordId];
+
+            if (!subRecordGroupData) {
+                ungroupedSubRecords.push(subRecord);
+                continue;
+            }
+
+            previousGroup = subRecordGroupData.group;
+
+            // get updated target row and column for this record
+            subRow = subRowMapper(subRecord, subRowsStore);
+            parentRow = subRow && me.getParentRow(subRow.getId());
+            column = columnMapper(subRecord, columnsStore);
+
+            if (!subRow || !parentRow || !column) {
+                Ext.Logger.warn('Data record ' + subRecordId + ' not matched to ' + (!subRow ? 'subRow' : !parentRow ? 'parentRow' : 'column')); // eslint-disable-line no-negated-condition, no-nested-ternary
+                continue;
+            }
+
+            // check if subRecord needs to be moved to a new group
+            if (subRow === subRecordGroupData.subRow && column === subRecordGroupData.column) {
+                continue;
+            }
+
+            // update subRow and column
+            subRecordGroupData.subRow = subRow;
+            subRecordGroupData.parentRow = parentRow;
+            subRecordGroupData.column = column;
+
+            // get new group
+            parentRowId = parentRow.getId();
+            group = rollupRows[parentRowId].groups;
+
+            subRowId = subRow.getId();
+            group = group[subRowId] || (group[subRowId] = {});
+
+            columnId = column.getId();
+            group = group[columnId] || (group[columnId] = {});
+            groupRecords = group.records || (group.records = []);
+
+            // move subRecord to new group
+            Ext.Array.remove(previousGroup.records, subRecordGroupData);
+            subRecordGroupData.previousGroup = previousGroup;
+            subRecordGroupData.group = group;
+            groupRecords.push(subRecordGroupData);
+
+            // mark both group dirty
+            group.dirty = true;
+            previousGroup.dirty = true;
+
+            // mark parent row for repaint
+            repaintRows[parentRowId] = true;
+
+            me.fireEvent('subrecordregrouped', me, subRecordGroupData, group, previousGroup);
+        }
+
+        if (ungroupedSubRecords.length) {
+            me.groupRecords(ungroupedSubRecords, false);
+        }
+
+        if (repaint !== false) {
+            for (parentRowId in repaintRows) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubCells(parentRowId);
+                }
+            }
+        }
     },
 
     invalidateSubRecordGroups: function(subRecords, repaint) {
-        // var me = this,
-        //     groupedRecords = me.groupedRecords,
+        var me = this,
+            rollupRows = me.rollupRows,
+            groupedSubRecords = me.groupedSubRecords,
 
-        //     recordsLength = records.length,
-        //     i = 0, recordGroupData;
+            subRecordsLength = subRecords.length,
+            i = 0, subRecordGroupData,
+            repaintRows = {}, parentRowId;
 
-        // if (!groupedRecords) {
-        //     return;
-        // }
+        if (!groupedSubRecords) {
+            return;
+        }
 
-        // for (; i < recordsLength; i++) {
-        //     recordGroupData = groupedRecords[records[i].getId()];
+        for (; i < subRecordsLength; i++) {
+            subRecordGroupData = groupedSubRecords[subRecords[i].getId()];
 
-        //     if (recordGroupData) {
-        //         recordGroupData.group.dirty = true;
-        //     }
-        // }
+            if (!subRecordGroupData) {
+                continue;
+            }
 
-        // if (repaint !== false) {
-        //     me.repaintCells();
-        // }
+            subRecordGroupData.group.dirty = true;
+
+            // mark parent row for repaint
+            repaintRows[subRecordGroupData.parentRow.getId()] = true;
+        }
+
+        if (repaint !== false) {
+            for (parentRowId in repaintRows) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubCells(parentRowId);
+                }
+            }
+        }
     },
 
     repaintSubCells: function(rowId) {
