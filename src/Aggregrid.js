@@ -660,12 +660,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             if (!row || !column) {
                 Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
-                return;
+                continue;
             }
 
             // check if record needs to be moved to a new group
             if (row === recordGroupData.row && column === recordGroupData.column) {
-                return;
+                continue;
             }
 
             // get new group
