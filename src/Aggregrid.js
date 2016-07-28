@@ -687,7 +687,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (ungroupedRecords.length) {
-            me.groupRecords(ungroupedRecords);
+            me.groupRecords(ungroupedRecords, false);
         }
 
         if (repaint !== false) {
