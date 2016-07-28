@@ -1,9 +1,11 @@
 /**
  * TODO:
- * - [ ] Apply refined lifecycle from Aggregrid
+ * - [X] Apply refined lifecycle from Aggregrid
  *      - [X] repaintSubGrid -> repaintSubCells
  *      - [X] new rendering flow
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
+ *      - [X] Eliminate aggregate function in favor of groupSubRecords()
+ *      - [ ] Implement regroupSubRecords and ungroupSubRecords, wire to store events
  * - [ ] Continuously update subrow data cell renderings
  *
  * MAYBEDO:
@@ -81,24 +83,24 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return Ext.StoreMgr.lookup(store);
     },
 
-    // updateSubDataStore: function(store, oldStore) {
-    //     var me = this,
-    //         listeners = {
-    //             scope: me,
-    //             load: 'onDataStoreLoad',
-    //             add: 'onDataStoreAdd',
-    //             remove: 'onDataStoreRemove',
-    //             update: 'onDataStoreUpdate'
-    //         };
+    updateSubDataStore: function(store, oldStore) {
+        var me = this,
+            listeners = {
+                scope: me,
+                load: 'onSubDataStoreLoad',
+                add: 'onSubDataStoreAdd',
+                remove: 'onSubDataStoreRemove',
+                update: 'onSubDataStoreUpdate'
+            };
 
-    //     if (oldStore) {
-    //         oldStore.un(listeners);
-    //     }
+        if (oldStore) {
+            oldStore.un(listeners);
+        }
 
-    //     if (store) {
-    //         store.on(listeners);
-    //     }
-    // },
+        if (store) {
+            store.on(listeners);
+        }
+    },
 
     applySubRowHeaderTpl: function(tpl) {
         if (!tpl) {
@@ -158,14 +160,32 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     // event handlers
+    onSubDataStoreLoad: function(subDataStore, subRecords) {
+        this.groupSubRecords(subRecords);
+    },
+
+    onSubDataStoreAdd: function(subDataStore, subRecords) {
+        this.groupSubRecords(subRecords);
+    },
+
+    onSubDataStoreRemove: function(subDataStore, subRecords) {
+        this.ungroupSubRecords(subRecords);
+    },
+
+    onSubDataStoreUpdate: function(subDataStore, subRecords) {
+        this.regroupSubRecords([subRecords], false);
+        this.invalidateSubRecordGroups([subRecords]);
+    },
 
 
-    // component methods
+    // Aggregrid lifecycle overrides
     doRefreshGrid: function(me) {
         var rollupRows = me.rollupRows = {},
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
-            rowIndex = 0, row, rowId;
+            rowIndex = 0, row, rowId,
+
+            subDataStore = me.getSubDataStore();
 
         me.callParent(arguments);
 
@@ -181,6 +201,15 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 groups: {}
             };
         }
+
+        // reset grouped records by-id cache
+        me.groupedSubRecords = {};
+
+        // group any initial data records
+        if (subDataStore && subDataStore.getCount()) {
+            me.groupSubRecords(subDataStore.getRange());
+        }
+
     },
 
     doExpand: function(me, rowId) {
@@ -189,6 +218,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         me.callParent(arguments);
     },
 
+    // RollupAggregrid methods
     repaintSubGrid: function(rowId) {
         var me = this,
             rollupRow = (me.rollupRows||{})[rowId];
@@ -250,7 +280,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         rollupRow.gridPainted = true;
 
         // recompile and repaint data
-        me.aggregateSubRows(rowId); // TODO: eliminate in favor of store-bound group/regroup/ungroup
         me.repaintSubCells(rowId);
     },
 
@@ -285,6 +314,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return data;
     },
 
+    // TODO: do this on on ongoing basis in response to rowsStore events
     groupSubRows: function() {
         if (this.subRowParents) {
             return;
@@ -348,40 +378,23 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         });
     },
 
-    aggregateSubRows: function(rowId) {
+    groupSubRecords: function(subRecords, repaint) {
         var me = this,
-            store = me.getSubDataStore();
+            rollupRows = me.rollupRows,
+            groupedSubRecords = me.groupedSubRecords,
 
-        if (!store || !store.isLoaded()) {
-            return;
-        }
-
-        console.info('%s.aggregateSubRows(%o)', this.getId(), rowId);
-
-        me.fireEventedAction('aggregatesubrows', [me, rowId], 'doAggregateSubRows', me);
-    },
-
-    doAggregateSubRows: function(me) {
-
-        // guard against additional runs here rather than in aggregateSubRows(), child classes
-        // may provide different implementations that use the rowId parameter to load rows individually
-        if (me.groupedSubRecords) {
-            return;
-        }
-
-        var rollupRows = me.rollupRows,
-            groupedSubRecords = me.groupedSubRecords = {},
-            subDataStore = me.getSubDataStore(),
             subRowsStore = me.getSubRowsStore(),
-            columnsStore = me.getColumnsStore(),
             subRowMapper = me.getSubRowMapper(),
+            columnsStore = me.getColumnsStore(),
             columnMapper = me.getColumnMapper(),
-            subRecordsCount = subDataStore.getCount(),
+
+            subRecordsCount = subRecords.length,
             subRecordIndex = 0, subRecord, subRecordId, parentRollupRow, subRecordGroupData,
-            subRow, subRowId, parentRow, column, columnId, group, groupRecords;
+            subRow, subRowId, parentRow, parentRowId, column, columnId, group, groupRecords,
+            repaintRows = {};
 
         for (; subRecordIndex < subRecordsCount; subRecordIndex++) {
-            subRecord = subDataStore.getAt(subRecordIndex);
+            subRecord = subRecords[subRecordIndex];
             subRecordId = subRecord.getId();
 
             // get target row and column for this record
@@ -403,7 +416,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             };
 
             // push record to records array for group at [rowId][columnId]
-            parentRollupRow = rollupRows[parentRow.getId()];
+            parentRowId = parentRow.getId();
+            parentRollupRow = rollupRows[parentRowId];
             group = parentRollupRow.groups;
 
             subRowId = subRow.getId();
@@ -415,7 +429,53 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             subRecordGroupData.group = group;
             groupRecords.push(subRecordGroupData);
+
+            // mark group dirty
+            group.dirty = true;
+
+            // mark parent row for repaint
+            repaintRows[parentRowId] = true;
         }
+
+        if (repaint !== false) {
+            for (parentRowId in repaintRows) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubCells(parentRowId);
+                }
+            }
+        }
+    },
+
+    ungroupSubRecords: function(records, repaint) {
+        // TODO: keep track of what rollupRows have been dirtied and repaint the ones with .cellsPainted unless repaint === false
+    },
+
+    regroupSubRecords: function(records, repaint) {
+        // TODO: keep track of what rollupRows have been dirtied and repaint the ones with .cellsPainted unless repaint === false
+    },
+
+    invalidateSubRecordGroups: function(subRecords, repaint) {
+        // var me = this,
+        //     groupedRecords = me.groupedRecords,
+
+        //     recordsLength = records.length,
+        //     i = 0, recordGroupData;
+
+        // if (!groupedRecords) {
+        //     return;
+        // }
+
+        // for (; i < recordsLength; i++) {
+        //     recordGroupData = groupedRecords[records[i].getId()];
+
+        //     if (recordGroupData) {
+        //         recordGroupData.group.dirty = true;
+        //     }
+        // }
+
+        // if (repaint !== false) {
+        //     me.repaintCells();
+        // }
     },
 
     repaintSubCells: function(rowId) {
