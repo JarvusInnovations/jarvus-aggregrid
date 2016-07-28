@@ -272,6 +272,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 group.subRowId = subRowId;
                 group.column = column;
                 group.columnId = columnId;
+                group.rendered = group.dirty = false;
             }
         }
 

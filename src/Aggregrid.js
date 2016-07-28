@@ -421,7 +421,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowHeadersCt, columnHeadersCt, dataCellsCt,
 
             rowIndex, row, rowId, rowEl, rowGroups,
-            columnIndex, column, columnId;
+            columnIndex, column, columnId,
+            group;
 
         // generate template data structure and execute against tpl
         me.setData(me.buildTplData());
@@ -449,7 +450,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                 columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
 
-                rowGroups[columnId].cellEl = rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+                group = rowGroups[columnId];
+                group.cellEl = rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+                group.rendered = group.dirty = false;
             }
         }
 
