@@ -1,8 +1,8 @@
 /**
  * TODO:
  * - [ ] Apply refined lifecycle from Aggregrid
- *      - [ ] repaintSubGrid -> repaintSubCells
- *      - [ ] new rendering flow
+ *      - [X] repaintSubGrid -> repaintSubCells
+ *      - [X] new rendering flow
  * - [ ] Continuously update aggregate subRow groups after initial aggregation
  * - [ ] Continuously update subrow data cell renderings
  *
@@ -184,23 +184,74 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doExpand: function(me, rowId) {
-        console.info('%s.doExpand(%o)', this.getId(), rowId);
+        console.info('%s.doExpand(%o)', me.getId(), rowId);
+        me.repaintSubGrid(rowId);
+        me.callParent(arguments);
+    },
 
-        var rollupRow = me.rollupRows[rowId],
-            expanderTplData = me.buildExpanderTplData(rowId);
+    repaintSubGrid: function(rowId) {
+        var me = this,
+            rollupRow = (me.rollupRows||{})[rowId];
 
-        if (!rollupRow.cellsPainted) {
-            rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
-            rollupRow.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
-
-            me.afterExpanderRefresh(rowId);
-
-            me.aggregateSubRows(rowId);
-
-            me.repaintSubCells(rowId);
+        if (!rollupRow || !rollupRow.groups) {
+            return;
         }
 
-        me.callParent(arguments);
+        me.fireEventedAction('repaintsubgrid', [me, rowId], 'doRepaintSubGrid', me);
+    },
+
+    doRepaintSubGrid: function(me, rowId) {
+        var rollupRow = me.rollupRows[rowId],
+            groups = rollupRow.groups,
+            expanderTplData = me.buildExpanderTplData(rowId),
+
+            subRowEls = rollupRow.subRowEls = {},
+            subRowHeaderEls = rollupRow.subRowHeaderEls = {},
+            headersEl, bodyEl,
+
+            subRows = rollupRow.subRows,
+            subRowsCount = subRows.length,
+            subRowIndex = 0, subRow, subRowId, subRowGroups, subRowEl,
+
+            columnsStore = me.getColumnsStore(),
+            columnsCount = columnsStore.getCount(),
+            columnIndex, column, columnId,
+            group;
+
+        // render templates against generated template data
+        headersEl = rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
+        bodyEl = rollupRow.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
+
+        // READ phase: query dom to collect references to key elements
+        for (; subRowIndex < subRowsCount; subRowIndex++) {
+            subRow = subRows[subRowIndex];
+            subRowId = subRow.getId();
+            subRowGroups = groups[subRowId] || (groups[subRowId] = {});
+
+            subRowHeaderEls[subRowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
+            subRowEl = subRowEls[subRowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
+
+            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                column = columnsStore.getAt(columnIndex);
+                columnId = column.getId();
+
+                group = subRowGroups[columnId] || (subRowGroups[columnId] = {});
+                group.cellEl = subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+                group.row = subRow;
+                group.subRowId = subRowId;
+                group.column = column;
+                group.columnId = columnId;
+            }
+        }
+
+        // READ->WRITE phase: sync row heights
+        me.syncSubRowHeights(rowId);
+
+        rollupRow.gridPainted = true;
+
+        // recompile and repaint data
+        me.aggregateSubRows(rowId); // TODO: eliminate in favor of store-bound group/regroup/ungroup
+        me.repaintSubCells(rowId);
     },
 
     buildExpanderTplData: function(rowId) {
@@ -266,55 +317,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     getParentRow: function(subRowId) {
         this.groupSubRows();
         return this.subRowParents[subRowId];
-    },
-
-    afterExpanderRefresh: function(rowId) {
-        console.info('%s.afterExpanderRefresh(%o)', this.getId(), rowId);
-
-        var me = this,
-            rollupRow = me.rollupRows[rowId],
-            headersEl = rollupRow.headersEl,
-            bodyEl = rollupRow.bodyEl,
-            groups = rollupRow.groups,
-
-            subRowEls = rollupRow.subRowEls = {},
-            subRowHeaderEls = rollupRow.subRowHeaderEls = {},
-
-            subRows = rollupRow.subRows,
-            subRowsCount = subRows.length,
-            subRowIndex = 0, subRow, subRowId, subRowGroups, subRowEl,
-
-            columnsStore = me.getColumnsStore(),
-            columnsCount = columnsStore.getCount(),
-            columnIndex, column, columnId,
-            group;
-
-        // READ phase: query dom to collect references to key elements
-        for (; subRowIndex < subRowsCount; subRowIndex++) {
-            subRow = subRows[subRowIndex];
-            subRowId = subRow.getId();
-            subRowGroups = groups[subRowId] || (groups[subRowId] = {});
-
-            subRowHeaderEls[subRowId] = headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
-            subRowEl = subRowEls[subRowId] = bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
-
-            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                column = columnsStore.getAt(columnIndex);
-                columnId = column.getId();
-
-                group = subRowGroups[columnId] || (subRowGroups[columnId] = {});
-                group.cellEl = subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
-                group.row = subRow;
-                group.subRowId = subRowId;
-                group.column = column;
-                group.columnId = columnId;
-            }
-        }
-
-        // READ->WRITE phase: sync row heights
-        me.syncSubRowHeights(rowId);
-
-        me.fireEvent('afterexpanderrefresh', me, rowId);
     },
 
     /**
