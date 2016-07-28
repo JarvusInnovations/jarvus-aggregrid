@@ -373,9 +373,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
         }
 
-        // reset expansion state
-        me.rowsExpanded = {};
-
         // reset grouped records by-id cache
         me.groupedRecords = {};
 
@@ -426,6 +423,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         // generate template data structure and execute against tpl
         me.setData(me.buildTplData());
+
+        // reset expansion state
+        me.rowsExpanded = {};
 
         // read top-level containers from dom
         rowHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody');
