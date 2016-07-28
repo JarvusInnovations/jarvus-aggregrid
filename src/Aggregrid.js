@@ -248,11 +248,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         this.groupRecords(records);
     },
 
-    onDataStoreRemove: function(store, records) {
+    onDataStoreRemove: function(dataStore, records) {
         this.ungroupRecords(records);
     },
 
-    onDataStoreUpdate: function(store, records) {
+    onDataStoreUpdate: function(dataStore, records) {
         this.regroupRecords([records], false);
         this.invalidateRecordGroups([records]);
     },
