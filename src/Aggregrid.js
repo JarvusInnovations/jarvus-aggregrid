@@ -51,7 +51,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                 '<tbody>',
                     '<tpl for="rows">',
-                        '{% parent.headerRowTpl.applyOut(values, out, parent) %}',
+                        '{% parent.headerRowTpl.applyOut(values, out) %}',
                     '</tpl>',
                 '</tbody>',
             '</table>',
@@ -70,7 +70,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                                     '<div class="jarvus-aggregrid-header-clip">',
                                         '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
                                             '<span class="jarvus-aggregrid-header-text">',
-                                                '{% values.columnHeaderTpl.applyOut(values, out, parent) %}',
+                                                '{% values.columnHeaderTpl.applyOut(values, out) %}',
                                             '</span>',
                                         '</a>',
                                     '</div>',
@@ -81,7 +81,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                     '<tbody>',
                         '<tpl for="rows">',
-                            '{% parent.rowTpl.applyOut(values, out, parent) %}',
+                            '{% parent.rowTpl.applyOut(values, out) %}',
                         '</tpl>',
                     '</tbody>',
                 '</table>',
@@ -93,7 +93,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         '<tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
             '<th class="jarvus-aggregrid-rowheader">',
                 '<div class="jarvus-aggregrid-header-text">',
-                    '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
+                    '{% values.rowHeaderTpl.applyOut(values, out) %}',
                 '</div>',
             '</th>',
         '</tr>',
@@ -257,7 +257,49 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     onRowsStoreAdd: function(rowsStore, rows) {
-        this.refreshGrid();
+        var me = this,
+            expandable = me.getExpandable(),
+            rendered = me.rendered,
+            rowHeadersCt = me.rowHeadersCt,
+            dataCellsCt = me.dataCellsCt,
+            headerRowEls = me.headerRowEls,
+            rowEls = me.rowEls,
+            headerRowExpanderEls = me.headerRowExpanderEls,
+            rowExpanderEls = me.rowExpanderEls,
+
+            columnsData = (me.getData()||{}).columns || [],
+            headerRowTpl = me.getTpl('headerRowTpl'),
+            rowTpl = me.getTpl('rowTpl'),
+            rowsLength = rows.length,
+            i = 0, row, rowId, rowTplData, rowEl;
+
+        for (; i < rowsLength; i++) {
+            row = rows[i];
+            rowId = row.getId();
+            rowTplData = me.buildRowTplData(row, columnsData);
+
+            // TODO: create groups entry
+
+            if (rendered) {
+                headerRowTpl.append(rowHeadersCt, rowTplData);
+                rowTpl.append(dataCellsCt, rowTplData);
+
+                headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+                rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+                rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+                headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+
+                // TODO: iterate columns and map cells from
+                rowEl;
+            }
+
+            debugger
+        }
+
+        // TODO: sync heights (only the new rows?)
+
+        // TODO: repaint cells
     },
 
     onRowsStoreRemove: function(rowsStore, rows) {
@@ -439,9 +481,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowsCount = rowsStore.getCount(),
 
             rowEls = me.rowEls = {},
-            rowHeaderEls = me.rowHeaderEls = {},
+            headerRowEls = me.headerRowEls = {},
             rowExpanderEls = me.rowExpanderEls = {},
-            rowHeaderExpanderEls = me.rowHeaderExpanderEls = {},
+            headerRowExpanderEls = me.headerRowExpanderEls = {},
             columnHeaderEls = me.columnHeaderEls = {},
             rowHeadersCt, columnHeadersCt, dataCellsCt,
 
@@ -467,10 +509,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowGroups = groups[rowId];
             rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
-            rowHeaderEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+            headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
             rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-            rowHeaderExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+            headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
 
             for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
                 column = columnsStore.getAt(columnIndex);
@@ -500,39 +542,41 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     buildTplData: function() {
         var me = this,
-            expandable = me.getExpandable(),
-
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
-            columnHeaderTpl = me.getColumnHeaderTpl(),
-
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
-            rowHeaderTpl = me.getRowHeaderTpl(),
-
-            i,
             data = {
                 headerRowTpl: me.getTpl('headerRowTpl'),
                 rowTpl: me.getTpl('rowTpl')
             },
             columns = data.columns = [],
-            rows = data.rows = [];
+            rows = data.rows = [],
+            i;
 
         for (i = 0; i < columnsCount; i++) {
-            columns.push(Ext.apply({
-                columnHeaderTpl: columnHeaderTpl
-            }, columnsStore.getAt(i).getData()));
+            columns.push(me.buildColumnTplData(columnsStore.getAt(i)));
         }
 
         for (i = 0; i < rowsCount; i++) {
-            rows.push(Ext.apply({
-                rowHeaderTpl: rowHeaderTpl,
-                expandable: expandable,
-                columns: columns
-            }, rowsStore.getAt(i).getData()));
+            rows.push(me.buildRowTplData(rowsStore.getAt(i), columns));
         }
 
         return data;
+    },
+
+    buildColumnTplData: function(column) {
+        return Ext.apply({
+            columnHeaderTpl: this.getColumnHeaderTpl()
+        }, column.getData());
+    },
+
+    buildRowTplData: function(row, columns) {
+        return Ext.apply({
+            rowHeaderTpl: this.getRowHeaderTpl(),
+            expandable: this.getExpandable(),
+            columns: columns
+        }, row.getData());
     },
 
     /**
@@ -540,7 +584,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * Synchronizes the heights of rows between the headers and data tables
      */
     syncRowHeights: function() {
-        var rowHeaderEls = this.rowHeaderEls,
+        var headerRowEls = this.headerRowEls,
             rowEls = this.rowEls,
             table1RowHeights = {},
             table2RowHeights = {},
@@ -548,15 +592,15 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         Ext.batchLayouts(function() {
             // read all the row height in batch first for both tables
-            for (rowKey in rowHeaderEls) { // eslint-disable-line guard-for-in
-                table1RowHeights[rowKey] = rowHeaderEls[rowKey].getHeight();
+            for (rowKey in headerRowEls) { // eslint-disable-line guard-for-in
+                table1RowHeights[rowKey] = headerRowEls[rowKey].getHeight();
                 table2RowHeights[rowKey] = rowEls[rowKey].getHeight();
             }
 
             // write all the max row heights
-            for (rowKey in rowHeaderEls) { // eslint-disable-line guard-for-in
+            for (rowKey in headerRowEls) { // eslint-disable-line guard-for-in
                 maxHeight = Math.max(table1RowHeights[rowKey], table2RowHeights[rowKey]);
-                rowHeaderEls[rowKey].select('td, th').setHeight(maxHeight);
+                headerRowEls[rowKey].select('td, th').setHeight(maxHeight);
                 rowEls[rowKey].select('td, th').setHeight(maxHeight);
             }
         });
@@ -813,20 +857,20 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.rowsExpanded[rowId] = true;
         me.syncExpanderHeight(rowId);
         me.rowEls[rowId].addCls('is-expanded');
-        me.rowHeaderEls[rowId].addCls('is-expanded');
+        me.headerRowEls[rowId].addCls('is-expanded');
     },
 
     doCollapse: function(me, rowId) {
         me.rowsExpanded[rowId] = false;
-        me.rowHeaderExpanderEls[rowId].setHeight(0);
+        me.headerRowExpanderEls[rowId].setHeight(0);
         me.rowExpanderEls[rowId].setHeight(0);
         me.rowEls[rowId].removeCls('is-expanded');
-        me.rowHeaderEls[rowId].removeCls('is-expanded');
+        me.headerRowEls[rowId].removeCls('is-expanded');
     },
 
     syncExpanderHeight: function(rowId) {
         var me = this,
-            rowHeaderExpanderEl = me.rowHeaderExpanderEls[rowId],
+            rowHeaderExpanderEl = me.headerRowExpanderEls[rowId],
             rowExpanderEl = me.rowExpanderEls[rowId],
 
             rowHeaderExpanderHeight = rowHeaderExpanderEl.first().getHeight(),
