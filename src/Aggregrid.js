@@ -226,7 +226,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         return function(dataRecord, rowsStore) {
-            return rowsStore.getById(dataRecord.get(mapper));
+            return rowsStore.getData().get(dataRecord.get(mapper));
         };
     },
 
