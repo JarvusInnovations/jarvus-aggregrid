@@ -260,7 +260,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             group;
 
         // render templates against generated template data
-        headersEl = rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.rowHeaderExpanderEls[rowId], expanderTplData, true);
+        headersEl = rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.headerRowExpanderEls[rowId], expanderTplData, true);
         bodyEl = rollupRow.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
 
         // READ phase: query dom to collect references to key elements
