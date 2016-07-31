@@ -316,13 +316,18 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
         }
 
+        // no futher work is needed if the grid has not rendered yet
+        if (!rendered) {
+            return;
+        }
+
         // READ->WRITE phase: sync row heights
         me.syncRowHeights(renderedRowIds);
 
-
         // TODO: regroup data
 
-        // TODO: repaint cells
+        // repaint cells
+        me.repaintCells(renderedRowIds);
     },
 
     onRowsStoreRemove: function(rowsStore, rows) {
@@ -833,7 +838,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
     },
 
-    repaintCells: function() {
+    repaintCells: function(rowIds) {
         var me = this,
             bufferedRepaintCells = me.bufferedRepaintCells;
 
@@ -841,26 +846,43 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             return;
         }
 
+        // skip buffering if this is a targetted repaint
+        if (rowIds) {
+            me.fireRepaintCells(rowIds);
+            return;
+        }
+
         if (!bufferedRepaintCells) {
-            bufferedRepaintCells = me.bufferedRepaintCells = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['repaintcells', [me], 'doRepaintCells', me]);
+            bufferedRepaintCells = me.bufferedRepaintCells = Ext.Function.createBuffered(me.fireRepaintCells, 10, me);
         }
 
         bufferedRepaintCells();
     },
 
-    doRepaintCells: function(me) {
-        console.info('%s.doRepaintCells', this.getId());
+    fireRepaintCells: function(rowIds) {
+        var me = this;
+
+        me.fireEventedAction('repaintcells', [me, rowIds], 'doRepaintCells', me);
+    },
+
+    doRepaintCells: function(me, rowIds) {
+        console.info('%s.doRepaintCells(%o)', this.getId(), rowIds);
 
         var groups = me.groups,
             cellTpl = me.getCellTpl(),
             cellRenderer = me.getCellRenderer(),
-            rowId, columns, columnId, group, cellEl, rendered, dirty;
+            rowsLength, rowIndex = 0, rowId,
+            columns, columnId, group, cellEl, rendered, dirty;
 
         if (!cellTpl && !cellRenderer) {
             return;
         }
 
-        for (rowId in groups) { // eslint-disable-line guard-for-in
+        rowIds = rowIds || Ext.Object.getKeys(me.groups);
+        rowsLength = rowIds.length;
+
+        for (; rowIndex < rowsLength; rowIndex++) {
+            rowId = rowIds[rowIndex];
             columns = groups[rowId];
 
             for (columnId in columns) { // eslint-disable-line guard-for-in
