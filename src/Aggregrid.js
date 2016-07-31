@@ -5,7 +5,7 @@
  * ## TODO
  * - [X] Continuously update data cell renderings
  * - [X] Continuously add rows
- * - [ ] Continuously remove rows
+ * - [ ] Continuously update/remove rows
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
