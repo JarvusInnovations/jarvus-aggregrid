@@ -7,6 +7,7 @@
  *      - [X] Eliminate aggregate function in favor of groupSubRecords()
  *      - [X] Implement regroupSubRecords and ungroupSubRecords, wire to store events
  * - [X] Continuously update subrow data cell renderings
+ * - [ ] Add new rows incrementally instead of redrawing
  * - [ ] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
  *
  * MAYBEDO:
@@ -176,6 +177,28 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     onSubDataStoreUpdate: function(subDataStore, subRecords) {
         this.regroupSubRecords([subRecords], false);
         this.invalidateSubRecordGroups([subRecords]);
+    },
+
+    // override of parent method
+    onRowsStoreAdd: function(rowsStore, rows) {
+        var me = this,
+            rollupRows = me.rollupRows,
+            rowsLength = rows.length,
+            rowIndex = 0, row, rowId;
+
+        me.callParent(arguments);
+
+        for (; rowIndex < rowsLength; rowIndex++) {
+            row = rows[rowIndex];
+            rowId = row.getId();
+
+            rollupRows[rowId] = {
+                row: row,
+                rowId: rowId,
+                subRows: [],
+                groups: {}
+            };
+        }
     },
 
 
