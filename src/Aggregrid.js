@@ -4,7 +4,8 @@
  *
  * ## TODO
  * - [X] Continuously update data cell renderings
- * - [ ] Continuously update rows
+ * - [X] Continuously add rows
+ * - [ ] Continuously remove rows
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
@@ -324,7 +325,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         // READ->WRITE phase: sync row heights
         me.syncRowHeights(renderedRowIds);
 
-        // TODO: regroup data
+        // regroup data
+        me.groupUngroupedRecords(false);
 
         // repaint cells
         me.repaintCells(renderedRowIds);
@@ -473,6 +475,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         // reset grouped records by-id cache
         me.groupedRecords = {};
+        me.ungroupedRecords = [];
 
         // group any initial data records
         if (dataStore && dataStore.getCount()) {
@@ -646,6 +649,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             groups = me.groups,
             groupedRecords = me.groupedRecords,
+            ungroupedRecords = me.ungroupedRecords,
 
             rowsStore = me.getRowsStore(),
             rowMapper = me.getRowMapper(),
@@ -669,7 +673,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             column = columnMapper(record, columnsStore);
 
             if (!row || !column) {
-                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+                ungroupedRecords.push(record);
                 continue;
             }
 
@@ -751,7 +755,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             recordsLength = records.length,
             i = 0, record, recordId, recordGroupData, previousGroup,
             row, column, rowId, columnId, group,
-            ungroupedRecords = [];
+            ungroupedRecords = [],
+            staleRecords = [];
 
         if (!groupedRecords) {
             return;
@@ -774,7 +779,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             column = columnMapper(record, columnsStore);
 
             if (!row || !column) {
-                Ext.Logger.warn('Data record ' + recordId + ' not matched to ' + (row ? 'column' : 'row'));
+                staleRecords.push(record);
                 continue;
             }
 
@@ -809,6 +814,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             me.groupRecords(ungroupedRecords, false);
         }
 
+        if (staleRecords.length) {
+            me.ungroupRecords(staleRecords, false);
+        }
+
         if (repaint !== false) {
             me.repaintCells();
         }
@@ -836,6 +845,18 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         if (repaint !== false) {
             me.repaintCells();
         }
+    },
+
+    groupUngroupedRecords: function(repaint) {
+        var me = this,
+            ungroupedRecords = me.ungroupedRecords;
+
+        if (!ungroupedRecords.length) {
+            return;
+        }
+
+        me.ungroupedRecords = [];
+        me.groupRecords(ungroupedRecords, repaint);
     },
 
     repaintCells: function(rowIds) {
