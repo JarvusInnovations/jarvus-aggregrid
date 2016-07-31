@@ -268,6 +268,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowsTpl = me.getTpl('rowsTpl'),
             rowsLength = rows.length, rowIndex, row, rowId, rowGroups, rowEl,
             rowsTplData = [],
+            renderedRowIds = [],
 
             columnsData = (me.getData()||{}).columns || [],
             columnsStore = me.getColumnsStore(),
@@ -296,8 +297,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                 rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
                 headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-            }
 
+                renderedRowIds.push(rowId);
+            }
 
             for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
                 column = columnsStore.getAt(columnIndex);
@@ -314,8 +316,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
         }
 
-
-        // TODO: sync heights (only the new rows?)
+        // READ->WRITE phase: sync row heights
+        me.syncRowHeights(renderedRowIds);
 
 
         // TODO: regroup data
@@ -604,22 +606,30 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * @public
      * Synchronizes the heights of rows between the headers and data tables
      */
-    syncRowHeights: function() {
-        var headerRowEls = this.headerRowEls,
-            rowEls = this.rowEls,
+    syncRowHeights: function(rowIds) {
+        var me = this,
+            headerRowEls = me.headerRowEls,
+            rowEls = me.rowEls,
             table1RowHeights = {},
             table2RowHeights = {},
-            rowKey, maxHeight;
+            rowsLength, rowIndex, rowKey, maxHeight;
+
+        rowIds = rowIds || Ext.Object.getKeys(me.groups);
+        rowsLength = rowIds.length;
 
         Ext.batchLayouts(function() {
             // read all the row height in batch first for both tables
-            for (rowKey in headerRowEls) { // eslint-disable-line guard-for-in
+            for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
+                rowKey = rowIds[rowIndex];
+
                 table1RowHeights[rowKey] = headerRowEls[rowKey].getHeight();
                 table2RowHeights[rowKey] = rowEls[rowKey].getHeight();
             }
 
             // write all the max row heights
-            for (rowKey in headerRowEls) { // eslint-disable-line guard-for-in
+            for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
+                rowKey = rowIds[rowIndex];
+
                 maxHeight = Math.max(table1RowHeights[rowKey], table2RowHeights[rowKey]);
                 headerRowEls[rowKey].select('td, th').setHeight(maxHeight);
                 rowEls[rowKey].select('td, th').setHeight(maxHeight);
