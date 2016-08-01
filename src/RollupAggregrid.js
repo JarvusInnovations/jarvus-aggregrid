@@ -9,6 +9,7 @@
  * - [X] Continuously update subrow data cell renderings
  * - [X] Add new rows incrementally instead of redrawing
  *      - [X] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
+ * - [ ] Track ungrouped subrecords and re-process on subrow add
  * - [ ] Continuously update/remove rows
  *
  * MAYBEDO:
@@ -222,6 +223,41 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 groups: {}
             };
         }
+    },
+
+    // override of parent method
+    onRowsStoreRemove: function(rowsStore, rows) {
+        var me = this,
+            rollupRows = me.rollupRows,
+            rowsLength = rows.length,
+            rowIndex = 0, row, rowId,
+            groups, subRowId, columns, columnId, group, groupRecords,
+            staleRecords = [];
+
+        me.callParent(arguments);
+
+        for (; rowIndex < rowsLength; rowIndex++) {
+            row = rows[rowIndex];
+            rowId = row.getId();
+            groups = rollupRows[rowId].groups;
+
+            for (subRowId in groups) { // eslint-disable-line guard-for-in
+                columns = groups[subRowId];
+
+                for (columnId in columns) { // eslint-disable-line guard-for-in
+                    group = columns[columnId];
+                    groupRecords = group.records;
+
+                    if (groupRecords) {
+                        Ext.Array.push(staleRecords, Ext.Array.pluck(groupRecords, 'record'));
+                    }
+                }
+            }
+
+            delete rollupRows[rowId];
+        }
+
+        me.ungroupSubRecords(staleRecords, false);
     },
 
 
