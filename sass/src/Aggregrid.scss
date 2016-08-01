@@ -150,6 +150,7 @@
 .jarvus-aggregrid-rowheaders-ct {
     border-bottom: 1px solid $jarvus-aggregrid-border-color;
     width: $jarvus-aggregrid-rowheader-width;
+    overflow-y: hidden;
 }
 
 .jarvus-aggregrid-row {

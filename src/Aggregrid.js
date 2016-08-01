@@ -5,7 +5,7 @@
  * ## TODO
  * - [X] Continuously update data cell renderings
  * - [X] Continuously add rows
- * - [ ] Implement scroll locking
+ * - [X] Implement scroll locking
  * - [ ] Continuously update/remove rows without refresh
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
@@ -410,6 +410,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         this.fireEvent('cellclick', this, rowId, columnId, el, ev);
     },
 
+    onDataScroll: function(ev, t) {
+        this.rowHeadersScrollerEl.dom.scrollTop = t.scrollTop;
+    },
+
 
     // component methods
     refreshGrid: function() {
@@ -506,6 +510,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         var expandable = me.getExpandable(),
             groups = me.groups,
+            el = me.el,
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
@@ -517,11 +522,18 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowExpanderEls = me.rowExpanderEls = {},
             headerRowExpanderEls = me.headerRowExpanderEls = {},
             columnHeaderEls = me.columnHeaderEls = {},
+            rowHeadersScrollerEl,
+            dataCellsScrollerEl = me.dataCellsScrollerEl,
             rowHeadersCt, columnHeadersCt, dataCellsCt,
 
             rowIndex, row, rowId, rowEl, rowGroups,
             columnIndex, column, columnId,
             group;
+
+        // clear any existing scroll listener
+        if (dataCellsScrollerEl) {
+            dataCellsScrollerEl.un('scroll', 'onDataScroll', me);
+        }
 
         // WRITE PHASE: generate template data structure and execute against tpl
         me.setData(me.buildTplData());
@@ -530,9 +542,15 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         me.rowsExpanded = {};
 
         // READ PHASE: query DOM for references to top-level containers
-        rowHeadersCt = me.rowHeadersCt = me.el.down('.jarvus-aggregrid-rowheaders-table tbody');
-        columnHeadersCt = me.columnHeadersCt = me.el.down('.jarvus-aggregrid-data-table thead');
-        dataCellsCt = me.dataCellsCt = me.el.down('.jarvus-aggregrid-data-table tbody');
+        rowHeadersScrollerEl = me.rowHeadersScrollerEl = el.down('.jarvus-aggregrid-rowheaders-ct');
+        dataCellsScrollerEl = me.dataCellsScrollerEl = el.down('.jarvus-aggregrid-scroller');
+
+        rowHeadersCt = me.rowHeadersCt = rowHeadersScrollerEl.down('.jarvus-aggregrid-rowheaders-table tbody');
+        columnHeadersCt = me.columnHeadersCt = el.down('.jarvus-aggregrid-data-table thead');
+        dataCellsCt = me.dataCellsCt = dataCellsScrollerEl.down('.jarvus-aggregrid-data-table tbody');
+
+        // attach scroll listener
+        dataCellsScrollerEl.on('scroll', 'onDataScroll', me);
 
         // READ phase: query DOM to collect references to key elements
         for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
