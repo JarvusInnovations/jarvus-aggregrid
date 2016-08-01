@@ -318,6 +318,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             }
         }
 
+        // regroup data
+        me.groupUngroupedRecords(false);
+
         // no futher work is needed if the grid has not rendered yet
         if (!rendered) {
             return;
@@ -325,9 +328,6 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         // READ->WRITE phase: sync row heights
         me.syncRowHeights(renderedRowIds);
-
-        // regroup data
-        me.groupUngroupedRecords(false);
 
         // repaint cells
         me.repaintCells(renderedRowIds);
