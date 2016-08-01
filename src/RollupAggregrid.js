@@ -9,8 +9,9 @@
  * - [X] Continuously update subrow data cell renderings
  * - [X] Add new rows incrementally instead of redrawing
  *      - [X] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
- * - [ ] Track ungrouped subrecords and re-process on subrow add
- * - [ ] Continuously update/remove rows
+ * - [X] Track ungrouped subrecords and re-process on subrow add
+ * - [X] Continuously remove rows
+ * - [ ] Continuously update rows
  *
  * MAYBEDO:
  * - [ ] Move some of expander lifecycle up to base class

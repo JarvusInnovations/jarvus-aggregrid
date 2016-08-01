@@ -6,7 +6,7 @@
  * - [X] Continuously update data cell renderings
  * - [X] Continuously add rows
  * - [ ] Implement scroll locking
- * - [ ] Continuously update/remove rows
+ * - [ ] Continuously update/remove rows without refresh
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
