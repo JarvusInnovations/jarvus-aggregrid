@@ -223,15 +223,23 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 groups: {}
             };
         }
+
+        // remap subRows
+        me.mapUnmappedSubRows(false);
+
+        // regroup data
+        me.groupUngroupedSubRecords(false);
     },
 
     // override of parent method
     onRowsStoreRemove: function(rowsStore, rows) {
         var me = this,
             rollupRows = me.rollupRows,
+            subRowParents = me.subRowParents,
             rowsLength = rows.length,
             rowIndex = 0, row, rowId,
-            groups, subRowId, columns, columnId, group, groupRecords,
+            groups, subRowId, rollupRow,
+            columns, columnId, group, groupRecords,
             staleRecords = [];
 
         me.callParent(arguments);
@@ -239,10 +247,13 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         for (; rowIndex < rowsLength; rowIndex++) {
             row = rows[rowIndex];
             rowId = row.getId();
-            groups = rollupRows[rowId].groups;
+            rollupRow = rollupRows[rowId];
+            groups = rollupRow.groups;
 
             for (subRowId in groups) { // eslint-disable-line guard-for-in
                 columns = groups[subRowId];
+
+                delete subRowParents[subRowId];
 
                 for (columnId in columns) { // eslint-disable-line guard-for-in
                     group = columns[columnId];
@@ -288,9 +299,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // reset subRow parents cache
         me.subRowParents = {};
+        me.unmappedSubRows = [];
 
         // reset grouped records by-id cache
         me.groupedSubRecords = {};
+        me.ungroupedSubRecords = [];
 
         // group any initial subrows
         if (subRowsStore && subRowsStore.getCount()) {
@@ -415,10 +428,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         return data;
     },
 
-    mapSubRows: function(subRows) {
+    mapSubRows: function(subRows, repaint) {
         var me = this,
             rollupRows = me.rollupRows,
             subRowParents = me.subRowParents,
+            unmappedSubRows = me.unmappedSubRows,
 
             rowsStore = me.getRowsStore(),
             parentRowMapper = me.getParentRowMapper(),
@@ -430,12 +444,15 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             parentRow = parentRowMapper(subRow, rowsStore);
 
             if (!parentRow) {
+                unmappedSubRows.push(subRow);
                 continue;
             }
 
             subRowParents[subRow.getId()] = parentRow;
             rollupRows[parentRow.getId()].subRows.push(subRow);
         }
+
+        me.groupUngroupedSubRecords(repaint);
     },
 
     unmapSubRows: function(subRows) {
@@ -444,6 +461,18 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     remapSubRows: function(subRows) {
         this.refreshGrid(); // TODO: support incremental update
+    },
+
+    mapUnmappedSubRows: function(repaint) {
+        var me = this,
+            unmappedSubRows = me.unmappedSubRows;
+
+        if (!unmappedSubRows.length) {
+            return;
+        }
+
+        me.unmappedSubRows = [];
+        me.mapSubRows(unmappedSubRows, repaint);
     },
 
     /**
@@ -480,6 +509,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             rollupRows = me.rollupRows,
             subRowParents = me.subRowParents,
             groupedSubRecords = me.groupedSubRecords,
+            ungroupedSubRecords = me.ungroupedSubRecords,
 
             subRowsStore = me.getSubRowsStore(),
             subRowMapper = me.getSubRowMapper(),
@@ -505,7 +535,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             column = columnMapper(subRecord, columnsStore);
 
             if (!subRow || !parentRow || !column) {
-                Ext.Logger.warn('Data record ' + subRecordId + ' not matched to ' + (!subRow ? 'subRow' : !parentRow ? 'parentRow' : 'column')); // eslint-disable-line no-negated-condition, no-nested-ternary
+                ungroupedSubRecords.push(subRecord);
                 continue;
             }
 
@@ -616,7 +646,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             subRecordIndex = 0, subRecord, subRecordId, subRecordGroupData, previousGroup,
             subRow, subRowId, parentRow, parentRowId, column, columnId, group, groupRecords,
             repaintRows = {},
-            ungroupedSubRecords = [];
+            ungroupedSubRecords = [],
+            staleRecords = [];
 
         if (!groupedSubRecords) {
             return repaintRows;
@@ -640,7 +671,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             column = columnMapper(subRecord, columnsStore);
 
             if (!subRow || !parentRow || !column) {
-                Ext.Logger.warn('Data record ' + subRecordId + ' not matched to ' + (!subRow ? 'subRow' : !parentRow ? 'parentRow' : 'column')); // eslint-disable-line no-negated-condition, no-nested-ternary
+                staleRecords.push(subRecord);
                 continue;
             }
 
@@ -683,6 +714,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         if (ungroupedSubRecords.length) {
             Ext.apply(repaintRows, me.groupSubRecords(ungroupedSubRecords, false));
+        }
+
+        if (staleRecords.length) {
+            Ext.apply(repaintRows, me.ungroupSubRecords(staleRecords, false));
         }
 
         if (repaint !== false) {
@@ -731,6 +766,18 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         return repaintRows;
+    },
+
+    groupUngroupedSubRecords: function(repaint) {
+        var me = this,
+            ungroupedSubRecords = me.ungroupedSubRecords;
+
+        if (!ungroupedSubRecords.length) {
+            return;
+        }
+
+        me.ungroupedSubRecords = [];
+        me.groupSubRecords(ungroupedSubRecords, repaint);
     },
 
     repaintSubCells: function(rowId) {
