@@ -11,6 +11,11 @@
  *      - [X] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
  * - [X] Track ungrouped subrecords and re-process on subrow add
  * - [X] Continuously remove rows
+ * - [ ] Should ungrouped records/subsubrecords get added to ungroupedRecords array?
+ *       - Usually those are called when the records are being removed
+ *       - But they might also be getting ungrouped because their parent is being removed and we want to keep them, ready for regrouping.
+ *       - maybe ungroup* should just be for deleting, and another method can handle re-staging them..is this what onRowRemove does?
+ *       - maybe ungroup* should always add to ungrouped, and then remove handles should additionally purge the ungrouped arrays, as they might already contain the removed records
  * - [ ] Continuously update rows
  *
  * MAYBEDO:
@@ -308,7 +313,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // group any initial subrows
         if (subRowsStore && subRowsStore.getCount()) {
-            me.mapSubRows(subRowsStore.getRange());
+            me.mapSubRows(subRowsStore.getRange(), false);
         }
 
         // group any initial data records
@@ -438,11 +443,13 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             rowsStore = me.getRowsStore(),
             parentRowMapper = me.getParentRowMapper(),
             subRowsLength = subRows.length,
-            subRowIndex = 0, subRow, parentRow;
+            subRowIndex = 0, subRow, parentRow, parentRowId,
+            repaintSubGrids = {};
 
         for (; subRowIndex < subRowsLength; subRowIndex++) {
             subRow = subRows[subRowIndex];
             parentRow = parentRowMapper(subRow, rowsStore);
+            parentRowId = parentRow.getId();
 
             if (!parentRow) {
                 unmappedSubRows.push(subRow);
@@ -450,14 +457,75 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             }
 
             subRowParents[subRow.getId()] = parentRow;
-            rollupRows[parentRow.getId()].subRows.push(subRow);
+            rollupRows[parentRowId].subRows.push(subRow);
+
+            repaintSubGrids[parentRowId] = true;
         }
 
-        me.groupUngroupedSubRecords(repaint);
+        me.groupUngroupedSubRecords(false);
+
+        if (repaint !== false) {
+            for (parentRowId in repaintSubGrids) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubGrid(parentRowId); // TODO: remove row instead of repainting whole subgrid
+                    me.syncExpanderHeight(parentRowId);
+                }
+            }
+        }
+
+        return repaintSubGrids;
     },
 
-    unmapSubRows: function(subRows) {
-        this.refreshGrid(); // TODO: support incremental update
+    unmapSubRows: function(subRows, repaint) {
+        var me = this,
+            rollupRows = me.rollupRows,
+            subRowParents = me.subRowParents,
+
+            subRowsLength = subRows.length,
+            subRowIndex = 0, subRow, subRowId, parentRow, parentRowId, rollupRow, columns,
+            columnId, group, groupRecords,
+            staleRecords = [],
+            repaintSubGrids = {};
+
+        for (; subRowIndex < subRowsLength; subRowIndex++) {
+            subRow = subRows[subRowIndex];
+            subRowId = subRow.getId();
+            parentRow = subRowParents[subRowId];
+
+            delete subRowParents[subRowId];
+
+            if (parentRow) {
+                parentRowId = parentRow.getId();
+                rollupRow = rollupRows[parentRowId];
+                columns = rollupRow.groups[subRowId];
+
+                Ext.Array.remove(rollupRow.subRows, subRow);
+
+                for (columnId in columns) { // eslint-disable-line guard-for-in
+                    group = columns[columnId];
+                    groupRecords = group.records;
+
+                    if (groupRecords) {
+                        Ext.Array.push(staleRecords, Ext.Array.pluck(groupRecords, 'record'));
+                    }
+                }
+
+                repaintSubGrids[parentRowId] = true;
+            }
+        }
+
+        me.ungroupSubRecords(staleRecords, false);
+
+        if (repaint !== false) {
+            for (parentRowId in repaintSubGrids) {
+                if (rollupRows[parentRowId].cellsPainted) {
+                    me.repaintSubGrid(parentRowId); // TODO: remove row instead of repainting whole subgrid
+                    me.syncExpanderHeight(parentRowId);
+                }
+            }
+        }
+
+        return repaintSubGrids;
     },
 
     remapSubRows: function(subRows) {
