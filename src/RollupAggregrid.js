@@ -277,7 +277,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var me = this,
             containerEl = me.el;
 
-        if ((target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) && target.up('.jarvus-aggregrid-subrow')) { // eslint-disable-line no-cond-assign
+        if (target = ev.getTarget('.jarvus-aggregrid-subrow .jarvus-aggregrid-cell', containerEl, true)) { // eslint-disable-line no-cond-assign
             return me.onCellClick(
                 parseInt(target.up('.jarvus-aggregrid-subrow').getAttribute('data-subrow-id'), 10),
                 parseInt(target.getAttribute('data-column-id'), 10),
