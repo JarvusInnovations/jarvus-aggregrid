@@ -272,6 +272,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         me.ungroupSubRecords(staleRecords, false);
     },
 
+    // override of parent method
     onClick: function(ev, target) {
         var me = this,
             containerEl = me.el;
