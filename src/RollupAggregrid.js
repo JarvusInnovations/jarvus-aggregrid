@@ -272,6 +272,26 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         me.ungroupSubRecords(staleRecords, false);
     },
 
+    // override of parent method
+    onClick: function(ev, target) {
+        var me = this,
+            containerEl = me.el;
+
+        if (target = ev.getTarget('.jarvus-aggregrid-subrow .jarvus-aggregrid-cell', containerEl, true)) { // eslint-disable-line no-cond-assign
+            return me.onSubCellClick(
+                parseInt(target.up('.jarvus-aggregrid-subrow').getAttribute('data-subrow-id'), 10),
+                parseInt(target.getAttribute('data-column-id'), 10),
+                target,
+                ev
+            );
+        }
+
+        return me.callParent(arguments);
+    },
+
+    onSubCellClick: function(subRowId, columnId, el, ev) {
+        this.fireEvent('subcellclick', this, subRowId, columnId, el, ev);
+    },
 
     // Aggregrid lifecycle overrides
     doRefreshGrid: function(me) {
