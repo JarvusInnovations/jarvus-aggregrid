@@ -274,18 +274,19 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     onClick: function(ev, target) {
         var me = this,
-            containerEl = me.el;
+            containerEl = me.el,
+            subRow;
 
-        if ((target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) && target.up('.jarvus-aggregrid-subrow')) { // eslint-disable-line no-cond-assign
+        if ((target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) && (subRow = target.up('.jarvus-aggregrid-subrow'))) { // eslint-disable-line no-cond-assign
             return me.onCellClick(
-                parseInt(target.up('.jarvus-aggregrid-subrow').getAttribute('data-subrow-id'), 10),
+                parseInt(subRow.getAttribute('data-subrow-id'), 10),
                 parseInt(target.getAttribute('data-column-id'), 10),
                 target,
                 ev
             );
         }
 
-        me.callParent(arguments);
+        return me.callParent(arguments);
     },
 
     // Aggregrid lifecycle overrides
