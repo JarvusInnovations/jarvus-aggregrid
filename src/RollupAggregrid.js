@@ -419,7 +419,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     buildExpanderTplData: function(rowId) {
         var me = this,
-            rollupRows = me.rollupRows,
+            rollupRows = me.rollupRows = me.rollupRows || (me.rollupRows = {}),
             rowHeaderTpl = me.getSubRowHeaderTpl() || me.getRowHeaderTpl(),
 
             columnsStore = me.getColumnsStore(),
@@ -451,14 +451,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     mapSubRows: function(subRows, repaint) {
         var me = this,
-            rollupRows = me.rollupRows,
-            subRowParents = me.subRowParents,
-            unmappedSubRows = me.unmappedSubRows,
+            rollupRows = me.rollupRows || (me.rollupRows = {}),
+            subRowParents = me.subRowParents || (me.subRowParents = {}),
+            unmappedSubRows = me.unmappedSubRows || (me.unmappedSubRows = []),
 
             rowsStore = me.getRowsStore(),
             parentRowMapper = me.getParentRowMapper(),
             subRowsLength = subRows.length,
-            subRowIndex = 0, subRow, parentRow;
+            subRowIndex = 0, subRow, parentRow, rollupRow;
 
         for (; subRowIndex < subRowsLength; subRowIndex++) {
             subRow = subRows[subRowIndex];
@@ -469,8 +469,12 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 continue;
             }
 
+            if (!(rollupRow = rollupRows[parentRow.getId()])) {
+                rollupRows[parentRow.getId()] = rollupRow = {subRows: [], groups: {}}
+            }
+
             subRowParents[subRow.getId()] = parentRow;
-            rollupRows[parentRow.getId()].subRows.push(subRow);
+            rollupRow.subRows.push(subRow);
         }
 
         me.groupUngroupedSubRecords(repaint);
@@ -791,7 +795,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     groupUngroupedSubRecords: function(repaint) {
         var me = this,
-            ungroupedSubRecords = me.ungroupedSubRecords;
+            ungroupedSubRecords = me.ungroupedSubRecords || [];
 
         if (!ungroupedSubRecords.length) {
             return;
