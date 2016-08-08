@@ -378,7 +378,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             );
         }
 
-        if ((target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) && target.up('.jarvus-aggregrid-row')) { // eslint-disable-line no-cond-assign
+        if (target = ev.getTarget('.jarvus-aggregrid-cell', containerEl, true)) { // eslint-disable-line no-cond-assign
             return me.onCellClick(
                 parseInt(target.up('.jarvus-aggregrid-row').getAttribute('data-row-id'), 10),
                 parseInt(target.getAttribute('data-column-id'), 10),
