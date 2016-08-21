@@ -837,9 +837,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             for (columnId in columns) { // eslint-disable-line guard-for-in
                 group = columns[columnId];
+                if (!group.cellEl) {
+                    me.repaintSubGrid(rowId);
+                    return;
+                }
                 cellEl = group.cellEl;
                 rendered = group.rendered;
                 dirty = group.dirty;
+
 
                 // apply cellTpl if this is the first render OR there's no cellRenderer and the group is dirty
                 if (!rendered || (!subCellRenderer && dirty)) {
