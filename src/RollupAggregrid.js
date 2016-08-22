@@ -56,7 +56,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                     '<tpl for="subRows">',
                         '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
                             '<tpl for="columns">',
-                                '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{columnId}">{text}</td>',
+                                '<td class="jarvus-aggregrid-cell" data-column-id="{columnId}"></td>',
                             '</tpl>',
                         '</tr>',
                     '</tpl>',
