@@ -39,7 +39,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
                     '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
+                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
                             '<th class="jarvus-aggregrid-rowheader">',
                                 '<span class="jarvus-aggregrid-header-text">',
                                     '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
@@ -54,9 +54,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             '<table class="jarvus-aggregrid-expander-table">',
                 '<tbody>',
                     '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
+                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
                             '<tpl for="columns">',
-                                '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
+                                '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{columnId}">{text}</td>',
                             '</tpl>',
                         '</tr>',
                     '</tpl>',
@@ -428,7 +428,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             subRows = rollupRows[rowId].subRows,
             subRowsCount = subRows.length,
-            subRowIndex = 0,
+            subRowIndex = 0, subRow,
 
             data = {},
             columnsData = data.columns = [],
@@ -440,10 +440,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         for (; subRowIndex < subRowsCount; subRowIndex++) {
+            subRow = subRows[subRowIndex];
+
             subRowsData.push(Ext.apply({
                 rowHeaderTpl: rowHeaderTpl,
-                columns: columnsData
-            }, subRows[subRowIndex].getData()));
+                columns: columnsData,
+                subRowId: subRow.getId(),
+                data: subRow.getData()
+            }));
         }
 
         return data;
