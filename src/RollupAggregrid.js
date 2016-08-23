@@ -477,6 +477,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             subRowsLength = subRows.length,
             subRowIndex = 0, subRow, parentRow;
 
+        if (!subRowParents) {
+            return;
+        }
+
         for (; subRowIndex < subRowsLength; subRowIndex++) {
             subRow = subRows[subRowIndex];
             parentRow = parentRowMapper(subRow, rowsStore);
