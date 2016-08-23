@@ -116,7 +116,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     applySubRowHeaderTpl: function(tpl) {
         if (!tpl) {
             tpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + this.getSubRowHeaderField() + '"]]}'
+                '{[typeof values === "string" ? values : values.data["' + this.getSubRowHeaderField() + '"]]}'
             );
         } else if (!tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);

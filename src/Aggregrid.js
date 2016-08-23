@@ -199,7 +199,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     applyColumnHeaderTpl: function(tpl) {
         if (!tpl) {
             tpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + this.getColumnHeaderField() + '"]]}'
+                '{[typeof values === "string" ? values : values.data["' + this.getColumnHeaderField() + '"]]}'
             );
         } else if (!tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
@@ -211,7 +211,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     applyRowHeaderTpl: function(tpl) {
         if (!tpl) {
             tpl = new Ext.XTemplate(
-                '{[typeof values === "string" ? values : values["' + this.getRowHeaderField() + '"]]}'
+                '{[typeof values === "string" ? values : values.data["' + this.getRowHeaderField() + '"]]}'
             );
         } else if (!tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
