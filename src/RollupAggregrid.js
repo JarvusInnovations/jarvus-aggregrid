@@ -340,12 +340,12 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // group any initial subrows
         if (subRowsStore && subRowsStore.getCount()) {
-            me.mapSubRows(subRowsStore.getRange());
+            me.mapSubRows(subRowsStore.getRange(), false);
         }
 
         // group any initial data records
         if (subDataStore && subDataStore.getCount()) {
-            me.groupSubRecords(subDataStore.getRange());
+            me.groupSubRecords(subDataStore.getRange(), false);
         }
     },
 
