@@ -11,7 +11,14 @@
  *      - [X] Eliminate groupSubRows, maintain metadata continously in response to subRowsStore events
  * - [X] Track ungrouped subrecords and re-process on subrow add
  * - [X] Continuously remove rows
+ * - [X] Handle subrows getting loaded before rows+columns->doRowRefresh
+ * - [ ] Should ungrouped records/subsubrecords get added to ungroupedRecords array?
+ *       - Usually those are called when the records are being removed
+ *       - But they might also be getting ungrouped because their parent is being removed and we want to keep them, ready for regrouping.
+ *       - maybe ungroup* should just be for deleting, and another method can handle re-staging them..is this what onRowRemove does?
+ *       - maybe ungroup* should always add to ungrouped, and then remove handles should additionally purge the ungrouped arrays, as they might already contain the removed records
  * - [ ] Continuously update rows
+ * - [ ] Respect subrow order from store
  *
  * MAYBEDO:
  * - [ ] Move some of expander lifecycle up to base class
@@ -34,36 +41,43 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subCellTpl: '{[values.records && values.records.length || 0]}',
         subCellRenderer: false,
 
-        expandable: true,
-        expanderHeadersTpl: [
-            '<table class="jarvus-aggregrid-expander-table">',
-                '<tbody>',
-                    '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
-                            '<th class="jarvus-aggregrid-rowheader">',
-                                '<span class="jarvus-aggregrid-header-text">',
-                                    '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
-                                '</span>',
-                            '</th>',
-                        '</tr>',
-                    '</tpl>',
-                '</tbody>',
-            '</table>'
-        ],
-        expanderBodyTpl: [
-            '<table class="jarvus-aggregrid-expander-table">',
-                '<tbody>',
-                    '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
-                            '<tpl for="columns">',
-                                '<td class="jarvus-aggregrid-cell" data-column-id="{columnId}"></td>',
-                            '</tpl>',
-                        '</tr>',
-                    '</tpl>',
-                '</tbody>',
-            '</table>'
-        ]
+        expandable: true
     },
+
+
+    expanderHeadersTpl: [
+        '<table class="jarvus-aggregrid-expander-table">',
+            '<tbody>{% values.headerSubRowsTpl.applyOut(values.subRows, out) %}</tbody>',
+        '</table>'
+    ],
+
+    expanderBodyTpl: [
+        '<table class="jarvus-aggregrid-expander-table">',
+            '<tbody>{% values.subRowsTpl.applyOut(values.subRows, out) %}</tbody>',
+        '</table>'
+    ],
+
+    headerSubRowsTpl: [
+        '<tpl for=".">',
+            '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
+                '<th class="jarvus-aggregrid-rowheader">',
+                    '<span class="jarvus-aggregrid-header-text">',
+                        '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
+                    '</span>',
+                '</th>',
+            '</tr>',
+        '</tpl>'
+    ],
+
+    subRowsTpl: [
+        '<tpl for=".">',
+            '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{subRowId}">',
+                '<tpl for="columns">',
+                    '<td class="jarvus-aggregrid-cell" data-column-id="{columnId}"></td>',
+                '</tpl>',
+            '</tr>',
+        '</tpl>'
+    ],
 
 
     // config handlers
@@ -146,22 +160,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     applySubCellTpl: function(tpl) {
-        if (tpl && !tpl.isTemplate) {
-            tpl = new Ext.XTemplate(tpl);
-        }
-
-        return tpl;
-    },
-
-    applyExpanderHeadersTpl: function(tpl) {
-        if (tpl && !tpl.isTemplate) {
-            tpl = new Ext.XTemplate(tpl);
-        }
-
-        return tpl;
-    },
-
-    applyExpanderBodyTpl: function(tpl) {
         if (tpl && !tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
         }
@@ -340,7 +338,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // group any initial subrows
         if (subRowsStore && subRowsStore.getCount()) {
-            me.mapSubRows(subRowsStore.getRange(), false);
+            me.mapSubRows(subRowsStore.getRange());
         }
 
         // group any initial data records
@@ -393,9 +391,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             columnIndex, column, columnId,
             group;
 
-        // render templates against generated template data
-        headersEl = rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.headerRowExpanderEls[rowId], expanderTplData, true);
-        bodyEl = rollupRow.bodyEl = me.getExpanderBodyTpl().overwrite(me.rowExpanderEls[rowId], expanderTplData, true);
+        // WRITE phase: render templates against generated template data
+        headersEl = rollupRow.headersEl = me.getTpl('expanderHeadersTpl').overwrite(me.headerRowExpanderEls[rowId], expanderTplData, true).down('tbody');
+        bodyEl = rollupRow.bodyEl = me.getTpl('expanderBodyTpl').overwrite(me.rowExpanderEls[rowId], expanderTplData, true).down('tbody');
 
         // READ phase: query dom to collect references to key elements
         for (; subRowIndex < subRowsCount; subRowIndex++) {
@@ -441,7 +439,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             subRowsCount = subRows.length,
             subRowIndex = 0,
 
-            data = {},
+            data = {
+                headerSubRowsTpl: me.getTpl('headerSubRowsTpl'),
+                subRowsTpl: me.getTpl('subRowsTpl')
+            },
             columnsData = data.columns = [],
             subRowsData = data.subRows = [];
 
@@ -466,7 +467,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         });
     },
 
-    mapSubRows: function(subRows, repaint) {
+    mapSubRows: function(subRows) {
         var me = this,
             rollupRows = me.rollupRows,
             subRowParents = me.subRowParents,
@@ -475,7 +476,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             rowsStore = me.getRowsStore(),
             parentRowMapper = me.getParentRowMapper(),
             subRowsLength = subRows.length,
-            subRowIndex = 0, subRow, parentRow;
+            subRowIndex = 0, subRow, subRowId, parentRow, parentRowId, rollupRow,
+            dirtyRollupRows = {}, dirtyRollupRow,
+            hasDirtyRollupRows = false, headerSubRowsTpl, subRowsTpl, columnsTplData, rowsTplData,
+            groups, subRowGroups, subRowHeaderEls, subRowEls, subRowEl, group,
+            columnsStore, columnsCount, columnIndex, column, columnId;
 
         if (!subRowParents) {
             return;
@@ -490,11 +495,111 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
                 continue;
             }
 
+            parentRowId = parentRow.getId();
+            rollupRow = rollupRows[parentRowId];
+
             subRowParents[subRow.getId()] = parentRow;
-            rollupRows[parentRow.getId()].subRows.push(subRow);
+            rollupRow.subRows.push(subRow);
+
+            // finish with this subRow if it's rollupRow isn't painted yet
+            if (!rollupRow.gridPainted) {
+                continue;
+            }
+
+            // queue subRow to row's render queue
+            dirtyRollupRow = dirtyRollupRows[parentRowId];
+
+            if (!dirtyRollupRow) {
+                dirtyRollupRow = dirtyRollupRows[parentRowId] = {
+                    rollupRow: rollupRow,
+                    newSubRows: []
+                };
+            }
+
+            dirtyRollupRow.newSubRows.push(subRow);
+            hasDirtyRollupRows = true;
         }
 
-        me.groupUngroupedSubRecords(repaint);
+        // re-process ungrouped subrecords with new subrows mapped
+        me.groupUngroupedSubRecords();
+
+        // skip rest of method if no rollupRows need updating
+        if (!hasDirtyRollupRows) {
+            return;
+        }
+
+        headerSubRowsTpl = me.getTpl('headerSubRowsTpl');
+        subRowsTpl = me.getTpl('subRowsTpl');
+        columnsTplData = (me.getData()||{}).columns || [];
+        columnsStore = me.getColumnsStore();
+        columnsCount = columnsStore.getCount();
+
+        // WRITE phase: generate tpl data for new rows, render them, and append to existing subgrid bodies
+        for (parentRowId in dirtyRollupRows) {
+            dirtyRollupRow = dirtyRollupRows[parentRowId];
+
+            subRows = dirtyRollupRow.newSubRows;
+            subRowsLength = subRows.length;
+
+            rollupRow = dirtyRollupRow.rollupRow;
+
+            rowsTplData = [];
+            for (subRowIndex = 0; subRowIndex < subRowsLength; subRowIndex++) {
+                rowsTplData.push(me.buildSubRowTplData(subRows[subRowIndex], columnsTplData));
+            }
+
+            headerSubRowsTpl.append(rollupRow.headersEl, rowsTplData);
+            subRowsTpl.append(rollupRow.bodyEl, rowsTplData);
+        }
+
+        // READ phase: query dom to collect references to key elements
+        for (parentRowId in dirtyRollupRows) {
+            dirtyRollupRow = dirtyRollupRows[parentRowId];
+            subRows = dirtyRollupRow.newSubRows;
+            subRowsLength = subRows.length;
+
+            rollupRow = dirtyRollupRow.rollupRow;
+            groups = rollupRow.groups;
+            subRowHeaderEls = rollupRow.subRowHeaderEls;
+            subRowEls = rollupRow.subRowEls;
+
+            for (subRowIndex = 0; subRowIndex < subRowsLength; subRowIndex++) {
+                subRow = subRows[subRowIndex];
+                subRowId = subRow.getId();
+                subRowGroups = groups[subRowId] || (groups[subRowId] = {});
+
+                subRowHeaderEls[subRowId] = rollupRow.headersEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
+                subRowEl = subRowEls[subRowId] = rollupRow.bodyEl.down('.jarvus-aggregrid-subrow[data-subrow-id="'+subRowId+'"]');
+
+                for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+                    column = columnsStore.getAt(columnIndex);
+                    columnId = column.getId();
+
+                    group = subRowGroups[columnId] || (subRowGroups[columnId] = {});
+                    group.cellEl = subRowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+                    group.row = subRow;
+                    group.subRowId = subRowId;
+                    group.column = column;
+                    group.columnId = columnId;
+                    group.rendered = group.dirty = false;
+                }
+            }
+        }
+
+        // READ->WRITE phase: sync row heights
+        for (parentRowId in dirtyRollupRows) {
+            me.syncSubRowHeights(parentRowId);
+        }
+
+        // WRITE phase: repaint data
+        for (parentRowId in dirtyRollupRows) {
+            me.repaintSubCells(parentRowId);
+        }
+
+        // READ->WRITE phase: sync expander heights
+        for (parentRowId in dirtyRollupRows) {
+            me.syncExpanderHeight(parentRowId);
+        }
     },
 
     unmapSubRows: function(subRows) {
@@ -514,7 +619,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         me.unmappedSubRows = [];
-        me.mapSubRows(unmappedSubRows, repaint);
+        me.mapSubRows(unmappedSubRows);
     },
 
     /**
