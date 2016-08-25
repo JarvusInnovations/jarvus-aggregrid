@@ -196,9 +196,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // remap subRows
         me.mapUnmappedSubRows();
-
-        // regroup data
-        me.groupUngroupedSubRecords(false);
     },
 
     /**
