@@ -987,7 +987,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         me.ungroupedSubRecords = [];
-        me.groupSubRecords(ungroupedSubRecords, repaint);
+        return me.groupSubRecords(ungroupedSubRecords, repaint);
     },
 
     repaintSubCells: function(rowId) {
