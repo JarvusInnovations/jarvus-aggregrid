@@ -169,40 +169,11 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     // event handlers
-    onSubRowsStoreLoad: function(subRowsStore, subRows) {
-        this.mapSubRows(subRows);
-    },
 
-    onSubRowsStoreAdd: function(subRowsStore, subRows) {
-        this.mapSubRows(subRows);
-    },
-
-    onSubRowsStoreRemove: function(subRowsStore, subRows) {
-        this.unmapSubRows(subRows);
-    },
-
-    onSubRowsStoreUpdate: function(subRowsStore, subRows) {
-        this.remapSubRows(subRows);
-    },
-
-    onSubDataStoreLoad: function(subDataStore, subRecords) {
-        this.groupSubRecords(subRecords);
-    },
-
-    onSubDataStoreAdd: function(subDataStore, subRecords) {
-        this.groupSubRecords(subRecords);
-    },
-
-    onSubDataStoreRemove: function(subDataStore, subRecords) {
-        this.ungroupSubRecords(subRecords);
-    },
-
-    onSubDataStoreUpdate: function(subDataStore, subRecords) {
-        this.regroupSubRecords([subRecords], false);
-        this.invalidateSubRecordGroups([subRecords]);
-    },
-
-    // override of parent method
+    /**
+     * @override
+     * Overrides Aggregrid's handler for row records being added
+     */
     onRowsStoreAdd: function(rowsStore, rows) {
         var me = this,
             rollupRows = me.rollupRows,
@@ -230,7 +201,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         me.groupUngroupedSubRecords(false);
     },
 
-    // override of parent method
+    /**
+     * @override
+     * Overrides Aggregrid's handler for row records being removed
+     */
     onRowsStoreRemove: function(rowsStore, rows) {
         var me = this,
             rollupRows = me.rollupRows,
@@ -268,6 +242,39 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         me.ungroupSubRecords(staleRecords, false);
+    },
+
+    onSubRowsStoreLoad: function(subRowsStore, subRows) {
+        this.mapSubRows(subRows);
+    },
+
+    onSubRowsStoreAdd: function(subRowsStore, subRows) {
+        this.mapSubRows(subRows);
+    },
+
+    onSubRowsStoreRemove: function(subRowsStore, subRows) {
+        this.unmapSubRows(subRows);
+    },
+
+    onSubRowsStoreUpdate: function(subRowsStore, subRows) {
+        this.remapSubRows(subRows);
+    },
+
+    onSubDataStoreLoad: function(subDataStore, subRecords) {
+        this.groupSubRecords(subRecords);
+    },
+
+    onSubDataStoreAdd: function(subDataStore, subRecords) {
+        this.groupSubRecords(subRecords);
+    },
+
+    onSubDataStoreRemove: function(subDataStore, subRecords) {
+        this.ungroupSubRecords(subRecords);
+    },
+
+    onSubDataStoreUpdate: function(subDataStore, subRecords) {
+        this.regroupSubRecords([subRecords], false);
+        this.invalidateSubRecordGroups([subRecords]);
     },
 
     // override of parent method
