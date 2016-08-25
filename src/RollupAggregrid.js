@@ -173,6 +173,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     /**
      * @override
      * Overrides Aggregrid's handler for row records being added
+     *
+     * When new main/parent/rollup rows are added, RollupAggregrid must:
+     * - Initialize metadata structures for parent(rollup) row
+     * - Scan through unmappedSubRows to find any that can now be mapped
      */
     onRowsStoreAdd: function(rowsStore, rows) {
         var me = this,
@@ -201,6 +205,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     /**
      * @override
      * Overrides Aggregrid's handler for row records being removed
+     *
+     * When new main/parent/rollup rows are removed, RollupAggregrid must:
+     * - Destroy metadata structures for parent(rollup) row
+     * - Move any mapped subrows to unmapped
      */
     onRowsStoreRemove: function(rowsStore, rows) {
         var me = this,
@@ -241,34 +249,85 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         me.ungroupSubRecords(staleRecords, false);
     },
 
+    /**
+     * @override
+     * Overrides Aggregrid's handler for row records being updated
+     *
+     * When new main/parent/rollup rows are updated, RollupAggregrid must:
+     * - Re-test any mapped subrows and move to unmappedSubRows if they no longer match
+     * - Scan through unmappedSubRows to find any that can now be mapped
+     */
+    onRowsStoreUpdate: function(rowsStore, rows) {
+        this.callParent(arguments);
+    },
+
+    /**
+     * When new subRows are loaded, do the same as onSubRowsStoreAdd
+     */
     onSubRowsStoreLoad: function(subRowsStore, subRows) {
         this.mapSubRows(subRows);
     },
 
+    /**
+     * When new subRows are added:
+     * - Scan through ungroupedSubRecords to find any that can now be grouped to the new subRows
+     * - Attempt to map each new subRow to a parent row or add to unmappedSubRows
+     */
     onSubRowsStoreAdd: function(subRowsStore, subRows) {
         this.mapSubRows(subRows);
     },
 
+    /**
+     * When subRows are removed:
+     * - Unmap removed subRows from parent(rollup) rows
+     * - Purge removed subRows from unmappedSubRows
+     * - Ungroup all subRecords grouped into the removed subRows
+     */
     onSubRowsStoreRemove: function(subRowsStore, subRows) {
         this.unmapSubRows(subRows);
     },
 
+    /**
+     * When subRows are updated:
+     * - Scan through all subRecords grouped to updated subRows and regroup them
+     * - Scan through ungroupedSubRecords to find any that can now be grouped to the updated subRows
+     * - Remap each updated subRow or move to unmappedSubRows
+     */
     onSubRowsStoreUpdate: function(subRowsStore, subRows) {
         this.remapSubRows(subRows);
     },
 
+    /**
+     * When subRecords are loaded, do the same as onSubDataStoreAdd
+     */
     onSubDataStoreLoad: function(subDataStore, subRecords) {
         this.groupSubRecords(subRecords);
     },
 
+    /**
+     * When subRecords are added:
+     * - Group new subRecords to a subRow or add to ungroupedSubRecords
+     * - Repaint all subRows impacted by new grouping
+     */
     onSubDataStoreAdd: function(subDataStore, subRecords) {
         this.groupSubRecords(subRecords);
     },
 
+    /**
+     * When subRecords are removed:
+     * - Ungroup from subRows
+     * - Purge removed subRecords from ungroupedSubRecords
+     * - Repaint all subRows impacted by new grouping
+     */
     onSubDataStoreRemove: function(subDataStore, subRecords) {
         this.ungroupSubRecords(subRecords);
     },
 
+    /**
+     * When subRecords are updated:
+     * - Regroup all updated subRecords or move to ungroupedSubRecords
+     * - Repaint all subRows impacted by new grouping or containing any of the updated subRecords
+     */
     onSubDataStoreUpdate: function(subDataStore, subRecords) {
         this.regroupSubRecords([subRecords], false);
         this.invalidateSubRecordGroups([subRecords]);
