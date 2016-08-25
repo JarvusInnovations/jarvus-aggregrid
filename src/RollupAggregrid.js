@@ -195,7 +195,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         // remap subRows
-        me.mapUnmappedSubRows(false);
+        me.mapUnmappedSubRows();
 
         // regroup data
         me.groupUngroupedSubRecords(false);
@@ -617,7 +617,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         this.refreshGrid(); // TODO: support incremental update
     },
 
-    mapUnmappedSubRows: function(repaint) {
+    mapUnmappedSubRows: function() {
         var me = this,
             unmappedSubRows = me.unmappedSubRows;
 
