@@ -265,6 +265,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
      * When new subRows are loaded, do the same as onSubRowsStoreAdd
      */
     onSubRowsStoreLoad: function(subRowsStore, subRows) {
+        this.groupUngroupedSubRecords(false); // no need to repaint, these subRows aren't mapped yet
         this.mapSubRows(subRows);
     },
 
@@ -274,6 +275,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
      * - Attempt to map each new subRow to a parent row or add to unmappedSubRows
      */
     onSubRowsStoreAdd: function(subRowsStore, subRows) {
+        this.groupUngroupedSubRecords(false); // no need to repaint, these subRows aren't mapped yet
         this.mapSubRows(subRows);
     },
 
@@ -583,9 +585,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             hasDirtyRollupRows = true;
         }
 
-        // re-process ungrouped subrecords with new subrows mapped
-        me.groupUngroupedSubRecords();
-
         // skip rest of method if no rollupRows need updating
         if (!hasDirtyRollupRows) {
             return;
@@ -741,6 +740,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             // get target row and column for this record
             subRow = subRowMapper(subRecord, subRowsStore);
+            // TODO: remove need of parentRow to map subRecord into subRow's groups
             parentRow = subRow && subRowParents[subRow.getId()];
             column = columnMapper(subRecord, columnsStore);
 
