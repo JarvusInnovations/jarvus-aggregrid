@@ -80,6 +80,22 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     ],
 
 
+    // component lifecycle overrides
+    constructor: function() {
+        var me = this;
+
+        // initialize internal data structures before configuration gets initialized
+        me.subRows = {};
+        me.unmappedSubRows = [];
+
+        me.subRecords = {};
+        me.ungroupedSubRecords = [];
+
+        // continue with component construction and configuration initialization
+        me.callParent(arguments);
+    },
+
+
     // config handlers
     applySubRowsStore: function(store) {
         return Ext.StoreMgr.lookup(store);
@@ -294,6 +310,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
      * - Scan through all subRecords grouped to updated subRows and regroup them
      * - Scan through ungroupedSubRecords to find any that can now be grouped to the updated subRows
      * - Remap each updated subRow or move to unmappedSubRows
+     * - Update subrow header content if subRowHeaderTpl is configured or subRowHeaderField is updated
      */
     onSubRowsStoreUpdate: function(subRowsStore, subRows) {
         this.remapSubRows(subRows);
@@ -665,7 +682,60 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     unmapSubRows: function(subRows) {
-        this.refreshGrid(); // TODO: support incremental update
+        var me = this,
+            rollupRows = me.rollupRows,
+            subRowParents = me.subRowParents,
+
+            subRowsLength = subRows.length,
+            subRowIndex = 0, subRow, subRowId, parentRow, parentRowId, rollupRow, columns,
+            columnId, group, groupRecords,
+            staleRecords = [],
+            repaintSubGrids = {};
+
+        if (!subRowParents) {
+            return repaintSubGrids;
+        }
+
+        for (; subRowIndex < subRowsLength; subRowIndex++) {
+            subRow = subRows[subRowIndex];
+            subRowId = subRow.getId();
+            parentRow = subRowParents[subRowId];
+
+            delete subRowParents[subRowId];
+
+            if (parentRow) {
+                parentRowId = parentRow.getId();
+                rollupRow = rollupRows[parentRowId];
+                columns = rollupRow.groups[subRowId];
+
+                Ext.Array.remove(rollupRow.subRows, subRow);
+
+                for (columnId in columns) { // eslint-disable-line guard-for-in
+                    group = columns[columnId];
+                    groupRecords = group.records;
+
+                    if (groupRecords) {
+                        Ext.Array.push(staleRecords, Ext.Array.pluck(groupRecords, 'record'));
+                    }
+                }
+
+                // repaintSubGrids[parentRowId] = true;
+            }
+        }
+
+        me.ungroupSubRecords(staleRecords, false);
+
+        // TODO: these aren't repaints, they're adding/removing subrows
+        // if (repaint !== false) {
+        //     for (parentRowId in repaintSubGrids) {
+        //         if (rollupRows[parentRowId].cellsPainted) {
+        //             me.repaintSubGrid(parentRowId); // TODO: remove row instead of repainting whole subgrid
+        //             me.syncExpanderHeight(parentRowId);
+        //         }
+        //     }
+        // }
+
+        return repaintSubGrids;
     },
 
     remapSubRows: function(subRows) {
@@ -715,8 +785,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     groupSubRecords: function(subRecords, repaint) {
         var me = this,
-            rollupRows = me.rollupRows,
-            subRowParents = me.subRowParents,
             groupedSubRecords = me.groupedSubRecords,
             ungroupedSubRecords = me.ungroupedSubRecords,
 
@@ -740,8 +808,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
             // get target row and column for this record
             subRow = subRowMapper(subRecord, subRowsStore);
-            // TODO: remove need of parentRow to map subRecord into subRow's groups
-            parentRow = subRow && subRowParents[subRow.getId()];
             column = columnMapper(subRecord, columnsStore);
 
             if (!subRow || !parentRow || !column) {
@@ -758,10 +824,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             };
 
             // push record to records array for group at [rowId][columnId]
-            parentRowId = parentRow.getId();
-            group = rollupRows[parentRowId].groups;
+            group = null;//rollupRows[parentRowId].groups;
 
             subRowId = subRow.getId();
+            // TODO: subRowId is unique enough, we can have a global cache of groups per subRow w/o going through rollupRow['parentRowId].groups
             group = group[subRowId] || (group[subRowId] = {});
 
             columnId = column.getId();

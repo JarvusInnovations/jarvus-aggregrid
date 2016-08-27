@@ -7,6 +7,7 @@
  * - [X] Continuously add rows
  * - [X] Implement scroll locking
  * - [ ] Continuously update/remove rows without refresh
+ * - [ ] Respect row/column orders from store
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
@@ -40,7 +41,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
 
-    tpl: [
+    renderTpl: [
         '<div class="jarvus-aggregrid-rowheaders-ct">',
             '<table class="jarvus-aggregrid-rowheaders-table">',
                 '<thead>',
@@ -51,7 +52,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '</tr>',
                 '</thead>',
 
-                '<tbody>{% values.headerRowsTpl.applyOut(values.rows, out) %}</tbody>',
+                '<tbody id="{id}-headerRowsCt" data-ref="headerRowsCt"></tbody>',
             '</table>',
         '</div>',
 
@@ -62,25 +63,33 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
                 '<table class="jarvus-aggregrid-data-table">',
                     '<thead>',
-                        '<tr>',
-                            '<tpl for="columns">',
-                                '<th class="jarvus-aggregrid-colheader" data-column-id="{columnId}">',
-                                    '<div class="jarvus-aggregrid-header-clip">',
-                                        '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
-                                            '<span class="jarvus-aggregrid-header-text">',
-                                                '{% values.columnHeaderTpl.applyOut(values, out) %}',
-                                            '</span>',
-                                        '</a>',
-                                    '</div>',
-                                '</th>',
-                            '</tpl>',
-                        '</tr>',
+                        '<tr id="{id}-columnHeadersCt" data-ref="columnHeadersCt"></tr>',
                     '</thead>',
 
-                    '<tbody>{% values.rowsTpl.applyOut(values.rows, out) %}</tbody>',
+                    '<tbody id="{id}-rowsCt" data-ref="rowsCt"></tbody>',
                 '</table>',
             '</div>',
         '</div>'
+    ],
+
+    childEls: [
+        'columnHeadersCt',
+        'headerRowsCt',
+        'rowsCt'
+    ],
+
+    columnHeadersTpl: [
+        '<tpl for=".">',
+            '<th class="jarvus-aggregrid-colheader" data-column-id="{id}">',
+                '<div class="jarvus-aggregrid-header-clip">',
+                    '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
+                        '<span class="jarvus-aggregrid-header-text">',
+                            '{% values.columnHeaderTpl.applyOut(values, out) %}',
+                        '</span>',
+                    '</a>',
+                '</div>',
+            '</th>',
+        '</tpl>',
     ],
 
     headerRowsTpl: [
@@ -124,10 +133,27 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     ],
 
 
-    // component lifecycle
+    // component lifecycle overrides
+    constructor: function() {
+        var me = this;
+
+        // initialize internal data structures before configuration gets initialized
+        me.columnsMap = {};
+        me.columns = [];
+        me.rowsMap = {};
+        me.rows = [];
+
+        me.recordsMap = {};
+        me.ungroupedRecords = [];
+
+        // continue with component construction and configuration initialization
+        me.callParent(arguments);
+    },
+
     afterRender: function() {
         this.callParent(arguments);
-        this.repaintGrid();
+        this.paintColumns();
+        // this.paintRows();
     },
 
 
@@ -137,15 +163,26 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     updateColumnsStore: function(store, oldStore) {
-        var me = this;
+        var me = this,
+            listeners = {
+                scope: me,
+                load: 'onColumnsStoreLoad',
+                add: 'onColumnsStoreAdd',
+                remove: 'onColumnsStoreRemove',
+                update: 'onColumnsStoreUpdate'
+            };
 
         if (oldStore) {
-            oldStore.un('datachanged', 'refreshGrid', me);
+            oldStore.un(listeners);
         }
 
         if (store) {
-            me.refreshGrid();
-            store.on('datachanged', 'refreshGrid', me);
+            if (store.isLoaded()) {
+                // if store is already loaded, trigger load handler now
+                me.onColumnsStoreLoad(store, store.getRange());
+            }
+
+            store.on(listeners);
         }
     },
 
@@ -168,7 +205,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (store) {
-            me.refreshGrid();
+            if (store.isLoaded()) {
+                // if store is already loaded, trigger load handler now
+                me.onRowsStoreLoad(store, store.getRange());
+            }
+
             store.on(listeners);
         }
     },
@@ -250,95 +291,228 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // event handlers
-    onRowsStoreLoad: function(rowsStore, rows) {
-        this.refreshGrid();
+
+    /**
+     * When new columns are loaded, do the same as onSubRowsStoreAdd
+     */
+    onColumnsStoreLoad: function(columnsStore, loadedColumns) {
+        this.onColumnsStoreAdd(columnsStore, loadedColumns, 0);
     },
 
-    onRowsStoreAdd: function(rowsStore, rows) {
+    /**
+     * When new columns are added:
+     * - Initialize `columns` render data object keyed to id
+     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the new rows
+     * - Paint unrendered columns
+     */
+    onColumnsStoreAdd: function(columnsStore, addedColumns, index) {
+        console.log('onColumnsStoreAdd(%o, %s: %o)', columnsStore, addedColumns.length, addedColumns);
+
         var me = this,
-            expandable = me.getExpandable(),
-            rendered = me.rendered,
-            groups = me.groups,
-            rowHeadersCt = me.rowHeadersCt,
-            dataCellsCt = me.dataCellsCt,
-            headerRowEls = me.headerRowEls,
-            rowEls = me.rowEls,
-            headerRowExpanderEls = me.headerRowExpanderEls,
-            rowExpanderEls = me.rowExpanderEls,
+            columnsMap = me.columnsMap,
+            addedColumnsLength = addedColumns.length,
+            addedColumnsIndex = 0, column, columnId,
+            addedColumnsRenderData = [];
 
-            headerRowsTpl = me.getTpl('headerRowsTpl'),
-            rowsTpl = me.getTpl('rowsTpl'),
-            rowsLength = rows.length, rowIndex, row, rowId, rowGroups, rowEl,
-            rowsTplData = [],
-            renderedRowIds = [],
+        for (; addedColumnsIndex < addedColumnsLength; addedColumnsIndex++) {
+            column = addedColumns[addedColumnsIndex];
+            columnId = column.getId();
 
-            columnsData = (me.getData()||{}).columns || [],
-            columnsStore = me.getColumnsStore(),
-            columnsCount = columnsStore.getCount(),
-            columnIndex, column, columnId;
-
-        // WRITE PHASE: execute rows tpl data array against templates
-        if (rendered) {
-            for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
-                rowsTplData.push(me.buildRowTplData(rows[rowIndex], columnsData));
-            }
-
-            headerRowsTpl.append(rowHeadersCt, rowsTplData);
-            rowsTpl.append(dataCellsCt, rowsTplData);
+            addedColumnsRenderData.push(columnsMap[columnId] = me.buildColumnRenderData(column));
         }
 
-        // READ phase: query DOM to collect references to key elements
-        for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
-            row = rows[rowIndex];
+        Ext.Array.insert(me.columns, index, addedColumnsRenderData);
+
+        me.paintColumns();
+    },
+
+    /**
+     * When new columns are added:
+     * - TODO: Move any grouped records to ungrouped
+     * - Destroy `columns` metadata object keyed to id
+     * - Unpoint rendered columns
+     */
+    onColumnsStoreRemove: function(columnsStore, removedColumns, index) {
+        console.log('onColumnsStoreRemove(%o, %s: %o)', columnsStore, removedColumns.length, removedColumns);
+
+        var me = this,
+            columnsMap = me.columnsMap,
+            removedColumnsLength = removedColumns.length,
+            removedColumnsIndex = 0, row, columnId, headerEl;
+
+        for (; removedColumnsIndex < removedColumnsLength; removedColumnsIndex++) {
+            row = removedColumns[removedColumnsIndex];
+            columnId = row.getId();
+            headerEl = columnsMap[columnId].headerEl;
+
+            if (headerEl) {
+                headerEl.destroy();
+            }
+
+            delete columnsMap[columnId];
+        }
+
+        Ext.Array.removeAt(me.columns, index, removedColumns.length);
+    },
+
+    /**
+     * When columns are updated:
+     * - TODO: Scan through all records grouped to updated columns and regroup them
+     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the updated columns
+     * - TODO: Update column header content if columnHeaderTpl is configured or columnHeaderField is updated
+     */
+    onColumnsStoreUpdate: function(columnsStore, updatedColumns) {
+        console.log('onColumnsStoreUpdate(%o, %s: %o)', columnsStore, updatedColumns.length, updatedColumns);
+        // this.refreshGrid();
+        // TODO: ungroup data records
+    },
+
+    /**
+     * When new rows are loaded, do the same as onSubRowsStoreAdd
+     */
+    onRowsStoreLoad: function(rowsStore, loadedRows) {
+        this.onRowsStoreAdd(rowsStore, loadedRows, 0);
+    },
+
+    /**
+     * When new rows are added:
+     * - Initialize `rows` render data object keyed to id
+     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the new rows
+     * - Trigger
+     */
+    onRowsStoreAdd: function(rowsStore, addedRows, index) {
+        console.log('onRowsStoreAdd(%o, %s: %o)', rowsStore, addedRows.length, addedRows);
+
+        var me = this,
+            rowsMap = me.rowsMap,
+            addedRowsLength = addedRows.length,
+            addedRowsIndex = 0, row, rowId,
+            addedRowsRenderData = [];
+
+        for (; addedRowsIndex < addedRowsLength; addedRowsIndex++) {
+            row = addedRows[addedRowsIndex];
             rowId = row.getId();
-            rowGroups = groups[rowId] = {};
 
-            if (rendered) {
-                headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-                rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
-
-                rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-                headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-
-                renderedRowIds.push(rowId);
-            }
-
-            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                column = columnsStore.getAt(columnIndex);
-                columnId = column.getId();
-
-                rowGroups[columnId] = {
-                    records: [],
-                    row: row,
-                    rowId: rowId,
-                    column: column,
-                    columnId: columnId,
-                    cellEl: rendered && rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]') || null
-                };
-            }
+            addedRowsRenderData.push(rowsMap[rowId] = me.buildRowRenderData(row));
         }
 
-        // regroup data
-        me.groupUngroupedRecords(false);
+        Ext.Array.insert(me.rows, index, addedRowsRenderData);
 
-        // no futher work is needed if the grid has not rendered yet
-        if (!rendered) {
-            return;
+        // var me = this,
+        //     expandable = me.getExpandable(),
+        //     rendered = me.rendered,
+        //     groups = me.groups,
+        //     rowHeadersCt = me.rowHeadersCt,
+        //     dataCellsCt = me.dataCellsCt,
+        //     headerRowEls = me.headerRowEls,
+        //     rowEls = me.rowEls,
+        //     headerRowExpanderEls = me.headerRowExpanderEls,
+        //     rowExpanderEls = me.rowExpanderEls,
+
+        //     headerRowsTpl = me.getTpl('headerRowsTpl'),
+        //     rowsTpl = me.getTpl('rowsTpl'),
+        //     rowsLength = rows.length, rowIndex, row, rowId, rowGroups, rowEl,
+        //     rowsTplData = [],
+        //     renderedRowIds = [],
+
+        //     columnsData = (me.getData()||{}).columns || [],
+        //     columnsStore = me.getColumnsStore(),
+        //     columnsCount = columnsStore.getCount(),
+        //     columnIndex, column, columnId;
+
+        // // WRITE PHASE: execute rows tpl data array against templates
+        // if (rendered) {
+        //     for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
+        //         rowsTplData.push(me.buildRowTplData(rows[rowIndex], columnsData));
+        //     }
+
+        //     headerRowsTpl.append(rowHeadersCt, rowsTplData);
+        //     rowsTpl.append(dataCellsCt, rowsTplData);
+        // }
+
+        // // READ phase: query DOM to collect references to key elements
+        // for (rowIndex = 0; rowIndex < rowsLength; rowIndex++) {
+        //     row = rows[rowIndex];
+        //     rowId = row.getId();
+        //     rowGroups = groups[rowId] = {};
+
+        //     if (rendered) {
+        //         headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+        //         rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+
+        //         rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+        //         headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+
+        //         renderedRowIds.push(rowId);
+        //     }
+
+        //     for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+        //         column = columnsStore.getAt(columnIndex);
+        //         columnId = column.getId();
+
+        //         rowGroups[columnId] = {
+        //             records: [],
+        //             row: row,
+        //             rowId: rowId,
+        //             column: column,
+        //             columnId: columnId,
+        //             cellEl: rendered && rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]') || null
+        //         };
+        //     }
+        // }
+
+        // // regroup data
+        // me.groupUngroupedRecords(false);
+
+        // // no futher work is needed if the grid has not rendered yet
+        // if (!rendered) {
+        //     return;
+        // }
+
+        // // READ->WRITE phase: sync row heights
+        // me.syncRowHeights(renderedRowIds);
+
+        // // repaint cells
+        // me.repaintCells(renderedRowIds);
+    },
+
+    /**
+     * When new rows are added:
+     * - TODO: Move any grouped records to ungrouped
+     * - Destroy `rows` metadata object keyed to id
+     */
+    onRowsStoreRemove: function(rowsStore, removedRows, index) {
+        console.log('onRowsStoreRemove(%o, %s: %o)', rowsStore, removedRows.length, removedRows);
+
+        var me = this,
+            rowsMap = me.rowsMap,
+            removedRowsLength = removedRows.length,
+            removedRowsIndex = 0, row, rowId;
+
+
+        for (; removedRowsIndex < removedRowsLength; removedRowsIndex++) {
+            row = removedRows[removedRowsIndex];
+            rowId = row.getId();
+
+            delete rowsMap[rowId];
         }
 
-        // READ->WRITE phase: sync row heights
-        me.syncRowHeights(renderedRowIds);
+        Ext.Array.removeAt(me.rows, index, removedRows.length);
 
-        // repaint cells
-        me.repaintCells(renderedRowIds);
+        // this.refreshGrid();
     },
 
-    onRowsStoreRemove: function(rowsStore, rows) {
-        this.refreshGrid();
-    },
-
-    onRowsStoreUpdate: function(rowsStore, rows) {
-        this.refreshGrid();
+    /**
+     * When rows are updated:
+     * - TODO: Scan through all records grouped to updated rows and regroup them
+     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the updated rows
+     * - TODO: Update row header content if rowHeaderTpl is configured or rowHeaderField is updated
+     */
+    onRowsStoreUpdate: function(rowsStore, updatedRows) {
+        console.log('onRowsStoreUpdate(%o, %s: %o)', rowsStore, updatedRows.length, updatedRows);
+        debugger
+        // this.refreshGrid();
+        // TODO: ungroup data records
     },
 
     onDataStoreLoad: function(dataStore, records) {
@@ -351,6 +525,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     onDataStoreRemove: function(dataStore, records) {
         this.ungroupRecords(records);
+        // TODO: purge removed data records from ungrouped
     },
 
     onDataStoreUpdate: function(dataStore, records) {
@@ -416,80 +591,173 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // component methods
-    refreshGrid: function() {
+    buildColumnRenderData: function(column) {
+        return Ext.apply({
+            id: column.getId(),
+            record: column,
+            data: column.getData(),
+            columnHeaderTpl: this.getColumnHeaderTpl(),
+            mappedRecords: []
+        });
+    },
+
+    buildRowRenderData: function(row) {
+        return Ext.apply({
+            id: row.getId(),
+            record: row,
+            data: row.getData(),
+            rowHeaderTpl: this.getRowHeaderTpl(),
+            expandable: this.getExpandable(),
+            rowColumns: {},
+            mappedRecords: []
+        });
+    },
+
+    paintColumns: function() {
         var me = this,
             columnsStore = me.getColumnsStore(),
-            rowsStore = me.getRowsStore(),
-            bufferedRefreshGrid = me.bufferedRefreshGrid;
+            bufferedPaintColumns = me.bufferedPaintColumns;
 
-        if (
-            !columnsStore || !rowsStore
-            || !columnsStore.isLoaded() || !rowsStore.isLoaded()
-        ) {
+        if (!me.rendered || !columnsStore|| !columnsStore.isLoaded()) {
             return;
         }
 
-        if (!bufferedRefreshGrid) {
-            bufferedRefreshGrid = me.bufferedRefreshGrid = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['refreshgrid', [me], 'doRefreshGrid', me]);
+        if (!bufferedPaintColumns) {
+            bufferedPaintColumns = me.bufferedPaintColumns = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['paintcolumns', [me], 'doPaintColumns', me]);
         }
 
-        bufferedRefreshGrid();
+        bufferedPaintColumns();
     },
+
+    /**
+     * @private
+     * Scan through all columns and render any unrendered ranges
+     */
+    doPaintColumns: function() {
+        console.info('doPaintColumns');
+
+        var me = this,
+            columnHeadersCt = me.columnHeadersCt,
+            columnHeadersTpl = me.getTpl('columnHeadersTpl'),
+            columns = me.columns,
+            columnsLength = columns.length,
+            columnIndex = 0, column,
+            paintQueue = [],paintPosition,
+            queryQueue = [], queryQueueLength, queryQueueIndex = 0, headerEl;
+
+        // WRITE PHASE
+        // intentionally loop once past the end of the array to flush paint queue
+        for (; columnIndex <= columnsLength; columnIndex++) {
+            column = columns[columnIndex];
+
+            // flush paint queue if we find a rendered column or the end of the list
+            if (!column || column.headerEl) {
+                paintPosition = columnIndex - paintQueue.length;
+
+                if (paintPosition != columnIndex) {
+                    if (paintPosition > 0) {
+                        columnHeadersTpl.insertAfter(columns[paintPosition - 1].headerEl, paintQueue);
+                    } else {
+                        columnHeadersTpl.insertFirst(columnHeadersCt, paintQueue);
+                    }
+
+                    // move painted columns to the query queue and reset the paint queue
+                    Ext.Array.push(queryQueue, paintQueue);
+                    paintQueue.length = 0;
+                }
+
+                continue;
+            }
+
+            paintQueue.push(column);
+        }
+
+        // READ PHASE
+        for (queryQueueLength = queryQueue.length; queryQueueIndex < queryQueueLength; queryQueueIndex++) {
+            column = queryQueue[queryQueueIndex];
+            column.headerEl = headerEl = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+column.id+'"]');
+            column.linkEl = headerEl.down('.jarvus-aggregrid-header-link');
+            column.textEl = headerEl.down('.jarvus-aggregrid-header-text');
+        }
+    },
+
+
+
+
+    // refreshGrid: function() {
+    //     var me = this,
+    //         columnsStore = me.getColumnsStore(),
+    //         rowsStore = me.getRowsStore(),
+    //         bufferedRefreshGrid = me.bufferedRefreshGrid;
+
+    //     if (
+    //         !columnsStore || !rowsStore
+    //         || !columnsStore.isLoaded() || !rowsStore.isLoaded()
+    //     ) {
+    //         return;
+    //     }
+
+    //     if (!bufferedRefreshGrid) {
+    //         bufferedRefreshGrid = me.bufferedRefreshGrid = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['refreshgrid', [me], 'doRefreshGrid', me]);
+    //     }
+
+    //     bufferedRefreshGrid();
+    // },
 
     /**
      * @private
      * Refresh the internal data structures for rows and columns
      */
-    doRefreshGrid: function(me) {
-        console.info('%s.doRefreshGrid', this.getId());
+    // doRefreshGrid: function(me) {
+    //     console.info('%s.doRefreshGrid', this.getId());
 
-        var me = this,
-            groups = me.groups = {},
+    //     var me = this,
+    //         groups = me.groups = {},
 
-            rowsStore = me.getRowsStore(),
-            rowsCount = rowsStore.getCount(),
-            rowIndex = 0, row, rowId, rowGroups,
+    //         rowsStore = me.getRowsStore(),
+    //         rowsCount = rowsStore.getCount(),
+    //         rowIndex = 0, row, rowId, rowGroups,
 
-            columnsStore = me.getColumnsStore(),
-            columnsCount = columnsStore.getCount(),
-            columnIndex, column, columnId,
+    //         columnsStore = me.getColumnsStore(),
+    //         columnsCount = columnsStore.getCount(),
+    //         columnIndex, column, columnId,
 
-            dataStore = me.getDataStore();
+    //         dataStore = me.getDataStore();
 
-        me.gridPainted = false;
+    //     me.gridPainted = false;
 
-        // initialize row x column groups map
-        for (; rowIndex < rowsCount; rowIndex++) {
-            row = rowsStore.getAt(rowIndex);
-            rowId = row.getId();
-            rowGroups = groups[rowId] = {};
+    //     // initialize row x column groups map
+    //     for (; rowIndex < rowsCount; rowIndex++) {
+    //         row = rowsStore.getAt(rowIndex);
+    //         rowId = row.getId();
+    //         rowGroups = groups[rowId] = {};
 
-            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                column = columnsStore.getAt(columnIndex);
-                columnId = column.getId();
+    //         for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+    //             column = columnsStore.getAt(columnIndex);
+    //             columnId = column.getId();
 
-                rowGroups[columnId] = {
-                    records: [],
-                    row: row,
-                    rowId: rowId,
-                    column: column,
-                    columnId: columnId
-                };
-            }
-        }
+    //             rowGroups[columnId] = {
+    //                 records: [],
+    //                 row: row,
+    //                 rowId: rowId,
+    //                 column: column,
+    //                 columnId: columnId
+    //             };
+    //         }
+    //     }
 
-        // reset grouped records by-id cache
-        me.groupedRecords = {};
-        me.ungroupedRecords = [];
+    //     // reset grouped records by-id cache
+    //     me.groupedRecords = {};
+    //     me.ungroupedRecords = [];
 
-        // group any initial data records
-        if (dataStore && dataStore.getCount()) {
-            me.groupRecords(dataStore.getRange());
-        }
+    //     // group any initial data records
+    //     if (dataStore && dataStore.getCount()) {
+    //         me.groupRecords(dataStore.getRange());
+    //     }
 
-        // repaint grid
-        me.repaintGrid();
-    },
+    //     // repaint grid
+    //     me.repaintGrid();
+    // },
 
     repaintGrid: function() {
         var me = this;
@@ -508,86 +776,86 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     doRepaintGrid: function(me) {
         console.info('%s.doRepaintGrid', this.getId());
 
-        var expandable = me.getExpandable(),
-            groups = me.groups,
-            el = me.el,
+        // var expandable = me.getExpandable(),
+        //     groups = me.groups,
+        //     el = me.el,
 
-            columnsStore = me.getColumnsStore(),
-            columnsCount = columnsStore.getCount(),
-            rowsStore = me.getRowsStore(),
-            rowsCount = rowsStore.getCount(),
+        //     columnsStore = me.getColumnsStore(),
+        //     columnsCount = columnsStore.getCount(),
+        //     rowsStore = me.getRowsStore(),
+        //     rowsCount = rowsStore.getCount(),
 
-            rowEls = me.rowEls = {},
-            headerRowEls = me.headerRowEls = {},
-            rowExpanderEls = me.rowExpanderEls = {},
-            headerRowExpanderEls = me.headerRowExpanderEls = {},
-            columnHeaderEls = me.columnHeaderEls = {},
-            rowHeadersScrollerEl,
-            dataCellsScrollerEl = me.dataCellsScrollerEl,
-            rowHeadersCt, columnHeadersCt, dataCellsCt,
+        //     rowEls = me.rowEls = {},
+        //     headerRowEls = me.headerRowEls = {},
+        //     rowExpanderEls = me.rowExpanderEls = {},
+        //     headerRowExpanderEls = me.headerRowExpanderEls = {},
+        //     columnHeaderEls = me.columnHeaderEls = {},
+        //     rowHeadersScrollerEl,
+        //     dataCellsScrollerEl = me.dataCellsScrollerEl,
+        //     rowHeadersCt, columnHeadersCt, dataCellsCt,
 
-            rowIndex, row, rowId, rowEl, rowGroups,
-            columnIndex, column, columnId,
-            group;
+        //     rowIndex, row, rowId, rowEl, rowGroups,
+        //     columnIndex, column, columnId,
+        //     group;
 
-        // clear any existing scroll listener
-        if (dataCellsScrollerEl) {
-            dataCellsScrollerEl.un('scroll', 'onDataScroll', me);
-        }
+        // // clear any existing scroll listener
+        // if (dataCellsScrollerEl) {
+        //     dataCellsScrollerEl.un('scroll', 'onDataScroll', me);
+        // }
 
-        // WRITE PHASE: generate template data structure and execute against tpl
-        me.setData(me.buildTplData());
+        // // WRITE PHASE: generate template data structure and execute against tpl
+        // me.setData(me.buildTplData());
 
-        // reset expansion state
-        me.rowsExpanded = {};
+        // // reset expansion state
+        // me.rowsExpanded = {};
 
-        // READ PHASE: query DOM for references to top-level containers
-        rowHeadersScrollerEl = me.rowHeadersScrollerEl = el.down('.jarvus-aggregrid-rowheaders-ct');
-        dataCellsScrollerEl = me.dataCellsScrollerEl = el.down('.jarvus-aggregrid-scroller');
+        // // READ PHASE: query DOM for references to top-level containers
+        // rowHeadersScrollerEl = me.rowHeadersScrollerEl = el.down('.jarvus-aggregrid-rowheaders-ct');
+        // dataCellsScrollerEl = me.dataCellsScrollerEl = el.down('.jarvus-aggregrid-scroller');
 
-        rowHeadersCt = me.rowHeadersCt = rowHeadersScrollerEl.down('.jarvus-aggregrid-rowheaders-table tbody');
-        columnHeadersCt = me.columnHeadersCt = el.down('.jarvus-aggregrid-data-table thead');
-        dataCellsCt = me.dataCellsCt = dataCellsScrollerEl.down('.jarvus-aggregrid-data-table tbody');
+        // rowHeadersCt = me.rowHeadersCt = rowHeadersScrollerEl.down('.jarvus-aggregrid-rowheaders-table tbody');
+        // columnHeadersCt = me.columnHeadersCt = el.down('.jarvus-aggregrid-data-table thead');
+        // dataCellsCt = me.dataCellsCt = dataCellsScrollerEl.down('.jarvus-aggregrid-data-table tbody');
 
-        // attach scroll listener
-        dataCellsScrollerEl.on('scroll', 'onDataScroll', me);
+        // // attach scroll listener
+        // dataCellsScrollerEl.on('scroll', 'onDataScroll', me);
 
-        // READ phase: query DOM to collect references to key elements
-        for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
-            row = rowsStore.getAt(rowIndex);
-            rowId = row.getId();
-            rowGroups = groups[rowId];
-            rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+        // // READ phase: query DOM to collect references to key elements
+        // for (rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
+        //     row = rowsStore.getAt(rowIndex);
+        //     rowId = row.getId();
+        //     rowGroups = groups[rowId];
+        //     rowEl = rowEls[rowId] = dataCellsCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
-            headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
+        //     headerRowEls[rowId] = rowHeadersCt.down('.jarvus-aggregrid-row[data-row-id="'+rowId+'"]');
 
-            rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
-            headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+        //     rowExpanderEls[rowId] = expandable && dataCellsCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
+        //     headerRowExpanderEls[rowId] = expandable && rowHeadersCt.down('.jarvus-aggregrid-expander[data-row-id="'+rowId+'"] .jarvus-aggregrid-expander-ct');
 
-            for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-                column = columnsStore.getAt(columnIndex);
-                columnId = column.getId();
+        //     for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+        //         column = columnsStore.getAt(columnIndex);
+        //         columnId = column.getId();
 
-                columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+        //         columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
 
-                group = rowGroups[columnId];
-                group.cellEl = rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
-                group.rendered = group.dirty = false;
-            }
-        }
+        //         group = rowGroups[columnId];
+        //         group.cellEl = rowEl.down('.jarvus-aggregrid-cell[data-column-id="'+columnId+'"]');
+        //         group.rendered = group.dirty = false;
+        //     }
+        // }
 
-        for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
-            columnId = columnsStore.getAt(columnIndex).getId();
-            columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
-        }
+        // for (columnIndex = 0; columnIndex < columnsCount; columnIndex++) {
+        //     columnId = columnsStore.getAt(columnIndex).getId();
+        //     columnHeaderEls[columnId] = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+columnId+'"]');
+        // }
 
-        // READ->WRITE phase: sync row heights
-        me.syncRowHeights();
+        // // READ->WRITE phase: sync row heights
+        // me.syncRowHeights();
 
-        me.gridPainted = true;
+        // me.gridPainted = true;
 
-        // repaint data
-        me.repaintCells();
+        // // repaint data
+        // me.repaintCells();
     },
 
     buildTplData: function() {
@@ -605,32 +873,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             i;
 
         for (i = 0; i < columnsCount; i++) {
-            columns.push(me.buildColumnTplData(columnsStore.getAt(i)));
+            columns.push(me.buildColumnRenderData(columnsStore.getAt(i)));
         }
 
         for (i = 0; i < rowsCount; i++) {
-            rows.push(me.buildRowTplData(rowsStore.getAt(i), columns));
+            rows.push(me.buildRowRenderData(rowsStore.getAt(i), columns));
         }
 
         return data;
-    },
-
-    buildColumnTplData: function(column) {
-        return Ext.apply({
-            columnHeaderTpl: this.getColumnHeaderTpl(),
-            columnId: column.getId(),
-            data: column.getData()
-        });
-    },
-
-    buildRowTplData: function(row, columns) {
-        return Ext.apply({
-            rowHeaderTpl: this.getRowHeaderTpl(),
-            expandable: this.getExpandable(),
-            columns: columns,
-            rowId: row.getId(),
-            data: row.getData()
-        });
     },
 
     /**
