@@ -89,12 +89,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                     '</a>',
                 '</div>',
             '</th>',
-        '</tpl>',
+        '</tpl>'
     ],
 
     headerRowsTpl: [
         '<tpl for=".">',
-            '<tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{rowId}">',
+            '<tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
                 '<th class="jarvus-aggregrid-rowheader">',
                     '<div class="jarvus-aggregrid-header-text">',
                         '{% values.rowHeaderTpl.applyOut(values, out) %}',
@@ -104,7 +104,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             // expander infrastructure
             '<tpl if="expandable">',
-                '<tr class="jarvus-aggregrid-expander" data-row-id="{rowId}">',
+                '<tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
                     '<td class="jarvus-aggregrid-expander-cell">',
                         '<div class="jarvus-aggregrid-expander-ct"></div>',
                     '</td>',
@@ -151,9 +151,12 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     },
 
     afterRender: function() {
-        this.callParent(arguments);
-        this.paintColumns();
-        // this.paintRows();
+        var me = this;
+
+        me.callParent(arguments);
+        me.paintColumns();
+        me.paintRows();
+        // me.paintData();
     },
 
 
@@ -302,7 +305,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     /**
      * When new columns are added:
      * - Initialize `columns` render data object keyed to id
-     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the new rows
+     * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the new columns
      * - Paint unrendered columns
      */
     onColumnsStoreAdd: function(columnsStore, addedColumns, index) {
@@ -338,10 +341,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             columnsMap = me.columnsMap,
             removedColumnsLength = removedColumns.length,
-            removedColumnsIndex = 0, row, columnId, headerEl;
+            removedColumnIndex = 0, row, columnId, headerEl;
 
-        for (; removedColumnsIndex < removedColumnsLength; removedColumnsIndex++) {
-            row = removedColumns[removedColumnsIndex];
+        for (; removedColumnIndex < removedColumnsLength; removedColumnIndex++) {
+            row = removedColumns[removedColumnIndex];
             columnId = row.getId();
             headerEl = columnsMap[columnId].headerEl;
 
@@ -378,7 +381,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
      * When new rows are added:
      * - Initialize `rows` render data object keyed to id
      * - TODO: Scan through ungroupedRecords to find any that can now be grouped to the new rows
-     * - Trigger
+     * - Paint unrendered rows
      */
     onRowsStoreAdd: function(rowsStore, addedRows, index) {
         console.log('onRowsStoreAdd(%o, %s: %o)', rowsStore, addedRows.length, addedRows);
@@ -398,6 +401,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         Ext.Array.insert(me.rows, index, addedRowsRenderData);
 
+        me.paintRows();
         // var me = this,
         //     expandable = me.getExpandable(),
         //     rendered = me.rendered,
@@ -487,12 +491,24 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             rowsMap = me.rowsMap,
             removedRowsLength = removedRows.length,
-            removedRowsIndex = 0, row, rowId;
+            removedRowIndex = 0, row, rowId,
+            rowRenderData, rowEl, expanderEl;
 
 
-        for (; removedRowsIndex < removedRowsLength; removedRowsIndex++) {
-            row = removedRows[removedRowsIndex];
+        for (; removedRowIndex < removedRowsLength; removedRowIndex++) {
+            row = removedRows[removedRowIndex];
             rowId = row.getId();
+            rowRenderData = rowsMap[rowId];
+            rowEl = rowRenderData.rowEl;
+            expanderEl = rowRenderData.expanderEl;
+
+            if (rowEl) {
+                rowEl.destroy();
+            }
+
+            if (expanderEl) {
+                expanderEl.destroy();
+            }
 
             delete rowsMap[rowId];
         }
@@ -642,7 +658,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             columns = me.columns,
             columnsLength = columns.length,
             columnIndex = 0, column,
-            paintQueue = [],paintPosition,
+            paintQueue = [], paintPosition,
             queryQueue = [], queryQueueLength, queryQueueIndex = 0, headerEl;
 
         // WRITE PHASE
@@ -678,6 +694,78 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             column.headerEl = headerEl = columnHeadersCt.down('.jarvus-aggregrid-colheader[data-column-id="'+column.id+'"]');
             column.linkEl = headerEl.down('.jarvus-aggregrid-header-link');
             column.textEl = headerEl.down('.jarvus-aggregrid-header-text');
+        }
+    },
+
+    paintRows: function() {
+        var me = this,
+            rowsStore = me.getRowsStore(),
+            bufferedPaintRows = me.bufferedPaintRows;
+
+        if (!me.rendered || !rowsStore|| !rowsStore.isLoaded()) {
+            return;
+        }
+
+        if (!bufferedPaintRows) {
+            bufferedPaintRows = me.bufferedPaintRows = Ext.Function.createBuffered(me.fireEventedAction, 10, me, ['paintrows', [me], 'doPaintRows', me]);
+        }
+
+        bufferedPaintRows();
+    },
+
+    /**
+     * @private
+     * Scan through all rows and render any unrendered ranges
+     */
+    doPaintRows: function() {
+        console.info('doPaintRows');
+
+        var me = this,
+            headerRowsCt = me.headerRowsCt,
+            headerRowsTpl = me.getTpl('headerRowsTpl'),
+            rows = me.rows,
+            rowsLength = rows.length,
+            rowIndex = 0, row,
+            paintQueue = [], paintPosition,
+            queryQueue = [], queryQueueLength, queryQueueIndex = 0, rowEl, expanderEl;
+
+        // WRITE PHASE
+        // intentionally loop once past the end of the array to flush paint queue
+        for (; rowIndex <= rowsLength; rowIndex++) {
+            row = rows[rowIndex];
+
+            // flush paint queue if we find a rendered row or the end of the list
+            if (!row || row.rowEl) {
+                paintPosition = rowIndex - paintQueue.length;
+
+                if (paintPosition != rowIndex) {
+                    if (paintPosition > 0) {
+                        headerRowsTpl.insertAfter(rows[paintPosition - 1].rowEl, paintQueue);
+                    } else {
+                        headerRowsTpl.insertFirst(headerRowsCt, paintQueue);
+                    }
+
+                    // move painted rows to the query queue and reset the paint queue
+                    Ext.Array.push(queryQueue, paintQueue);
+                    paintQueue.length = 0;
+                }
+
+                continue;
+            }
+
+            paintQueue.push(row);
+        }
+
+        // READ PHASE
+        for (queryQueueLength = queryQueue.length; queryQueueIndex < queryQueueLength; queryQueueIndex++) {
+            row = queryQueue[queryQueueIndex];
+            row.rowEl = rowEl = headerRowsCt.down('.jarvus-aggregrid-row[data-row-id="'+row.id+'"]');
+            row.textEl = rowEl.down('.jarvus-aggregrid-header-text');
+
+            if (row.expandable) {
+                row.expanderEl = expanderEl = headerRowsCt.down('.jarvus-aggregrid-expander[data-row-id="'+row.id+'"]');
+                row.expanderBodyEl = expanderEl.down('.jarvus-aggregrid-expander-ct');
+            }
         }
     },
 
