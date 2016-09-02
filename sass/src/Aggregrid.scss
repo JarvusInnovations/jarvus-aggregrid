@@ -176,6 +176,12 @@
     .jarvus-aggregrid-subrow &::before {
         display: none;
     }
+
+    &:hover {
+        .edit-row {
+            display: inline-block;
+        }
+    }
 }
 
 .jarvus-aggregrid-expander-ct {
@@ -193,8 +199,15 @@
 .jarvus-aggregrid-header-text {
     display: block;
     overflow: hidden;
+    position: relative;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    .edit-row {
+        display: none;
+        position: absolute;
+        right: .0625em;
+    }
 }
 
 .jarvus-aggregrid-scroller {
