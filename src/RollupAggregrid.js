@@ -277,6 +277,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var me = this,
             containerEl = me.el;
 
+        if (target = ev.getTarget('.jarvus-aggregrid-subrow .jarvus-aggregrid-rowheader', containerEl, true)) { // eslint-disable-line no-cond-assign
+            return me.onSubRowHeaderClick(
+                parseInt(target.up('.jarvus-aggregrid-subrow').getAttribute('data-subrow-id'), 10),
+                target,
+                ev
+            );
+        }
+
         if (target = ev.getTarget('.jarvus-aggregrid-subrow .jarvus-aggregrid-cell', containerEl, true)) { // eslint-disable-line no-cond-assign
             return me.onSubCellClick(
                 parseInt(target.up('.jarvus-aggregrid-subrow').getAttribute('data-subrow-id'), 10),
@@ -287,6 +295,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         }
 
         return me.callParent(arguments);
+    },
+
+    onSubRowHeaderClick: function(subRowId, el, ev) {
+        this.fireEvent('subrowheaderclick', this, subRowId, el, ev);
     },
 
     onSubCellClick: function(subRowId, columnId, el, ev) {
