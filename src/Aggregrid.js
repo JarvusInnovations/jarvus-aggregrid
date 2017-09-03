@@ -266,8 +266,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             headerRowExpanderEls = me.headerRowExpanderEls,
             rowExpanderEls = me.rowExpanderEls,
 
-            headerRowsTpl = me.getTpl('headerRowsTpl'),
-            rowsTpl = me.getTpl('rowsTpl'),
+            headerRowsTpl = me.lookupTpl('headerRowsTpl'),
+            rowsTpl = me.lookupTpl('rowsTpl'),
             rowsLength = rows.length, rowIndex, row, rowId, rowGroups, rowEl,
             rowsTplData = [],
             renderedRowIds = [],
@@ -597,8 +597,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
             rowsStore = me.getRowsStore(),
             rowsCount = rowsStore.getCount(),
             data = {
-                headerRowsTpl: me.getTpl('headerRowsTpl'),
-                rowsTpl: me.getTpl('rowsTpl')
+                headerRowsTpl: me.lookupTpl('headerRowsTpl'),
+                rowsTpl: me.lookupTpl('rowsTpl')
             },
             columns = data.columns = [],
             rows = data.rows = [],
