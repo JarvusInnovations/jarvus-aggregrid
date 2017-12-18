@@ -75,7 +75,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var me = this,
             listeners = {
                 scope: me,
-                load: 'onSubRowsStoreLoad',
+                refresh: 'onSubRowsStoreRefresh',
                 add: 'onSubRowsStoreAdd',
                 remove: 'onSubRowsStoreRemove',
                 update: 'onSubRowsStoreUpdate'
@@ -98,7 +98,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         var me = this,
             listeners = {
                 scope: me,
-                load: 'onSubDataStoreLoad',
+                refresh: 'onSubDataStoreRefresh',
                 add: 'onSubDataStoreAdd',
                 remove: 'onSubDataStoreRemove',
                 update: 'onSubDataStoreUpdate'
@@ -171,8 +171,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
 
     // event handlers
-    onSubRowsStoreLoad: function(subRowsStore, subRows) {
-        this.mapSubRows(subRows);
+    onSubRowsStoreRefresh: function(subRowsStore) {
+        this.mapSubRows(subRowsStore.getRange());
     },
 
     onSubRowsStoreAdd: function(subRowsStore, subRows) {
@@ -187,8 +187,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         this.remapSubRows(subRows);
     },
 
-    onSubDataStoreLoad: function(subDataStore, subRecords) {
-        this.groupSubRecords(subRecords);
+    onSubDataStoreRefresh: function(subDataStore) {
+        this.groupSubRecords(subDataStore.getRange());
     },
 
     onSubDataStoreAdd: function(subDataStore, subRecords) {
