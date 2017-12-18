@@ -31,8 +31,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         subRowHeaderField: 'title',
         subRowHeaderTpl: false,
 
-        subCellTpl: '{[values.records && values.records.length || 0]}',
-        subCellRenderer: false,
+        subCellTpl: null,
+        subCellRenderer: null,
 
         expandable: true,
         expanderHeadersTpl: [
@@ -844,10 +844,23 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         console.info('%s.doRepaintSubCells(%o)', this.getId(), rowId);
 
+        // default to cell* if null
+        if (subCellTpl === null) {
+            subCellTpl = me.getCellTpl();
+        }
+
+        if (subCellRenderer === null) {
+            subCellRenderer = me.getCellRenderer();
+        }
+
+
+        // abort repaint if no methods available
         if (!subCellTpl && !subCellRenderer) {
             return;
         }
 
+
+        // paint cells
         rollupRow.cellsPainted = true;
 
         for (subRowId in groups) { // eslint-disable-line guard-for-in
