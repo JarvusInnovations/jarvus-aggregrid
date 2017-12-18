@@ -449,7 +449,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // generate columns and rows render data
         for (; columnIndex < columnsCount; columnIndex++) {
-            columnsData.push(columnsStore.getAt(columnIndex).getData());
+            column = columnsStore.getAt(columnIndex);
+            columnsData.push(Ext.apply({
+                $id: column.getId()
+            }, column.getData()));
         }
 
         for (; subRowIndex < subRowsCount; subRowIndex++) {
