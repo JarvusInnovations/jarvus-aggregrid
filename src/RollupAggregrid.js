@@ -37,30 +37,30 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         expandable: true,
         expanderHeadersTpl: [
             '<table class="jarvus-aggregrid-expander-table">',
-                '<tbody>',
-                    '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
-                            '<th class="jarvus-aggregrid-rowheader">',
-                                '<span class="jarvus-aggregrid-header-text">',
-                                    '{% values.rowHeaderTpl.applyOut(values, out, parent) %}',
-                                '</span>',
-                            '</th>',
-                        '</tr>',
-                    '</tpl>',
-                '</tbody>',
+            '    <tbody>',
+            '        <tpl for="subRows">',
+            '            <tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
+            '                <th class="jarvus-aggregrid-rowheader">',
+            '                    <span class="jarvus-aggregrid-header-text">',
+            '                        {% values.rowHeaderTpl.applyOut(values, out, parent) %}',
+            '                    </span>',
+            '                </th>',
+            '            </tr>',
+            '        </tpl>',
+            '    </tbody>',
             '</table>'
         ],
         expanderBodyTpl: [
             '<table class="jarvus-aggregrid-expander-table">',
-                '<tbody>',
-                    '<tpl for="subRows">',
-                        '<tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
-                            '<tpl for="columns">',
-                                '<td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
-                            '</tpl>',
-                        '</tr>',
-                    '</tpl>',
-                '</tbody>',
+            '    <tbody>',
+            '        <tpl for="subRows">',
+            '            <tr class="jarvus-aggregrid-subrow" data-subrow-id="{id}">',
+            '                <tpl for="columns">',
+            '                    <td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
+            '                </tpl>',
+            '            </tr>',
+            '        </tpl>',
+            '    </tbody>',
             '</table>'
         ]
     },
@@ -350,9 +350,9 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doExpand: function(me, rowId) {
-        console.info('%s.doExpand(%o)', me.getId(), rowId);
-
         var rollupRow = me.rollupRows[rowId];
+
+        console.info('%s.doExpand(%o)', me.getId(), rowId);
 
         if (rollupRow && !rollupRow.gridPainted) {
             me.repaintSubGrid(rowId);
@@ -374,8 +374,6 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doRepaintSubGrid: function(me, rowId) {
-        console.info('%s.doRepaintSubGrid(%o)', this.getId(), rowId);
-
         var rollupRow = me.rollupRows[rowId],
             groups = rollupRow.groups,
             expanderTplData = me.buildExpanderTplData(rowId),
@@ -392,6 +390,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             columnsCount = columnsStore.getCount(),
             columnIndex, column, columnId,
             group;
+
+        console.info('%s.doRepaintSubGrid(%o)', this.getId(), rowId);
 
         // render templates against generated template data
         headersEl = rollupRow.headersEl = me.getExpanderHeadersTpl().overwrite(me.headerRowExpanderEls[rowId], expanderTplData, true);
@@ -482,7 +482,10 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
             }
 
             if (!(rollupRow = rollupRows[parentRow.getId()])) {
-                rollupRows[parentRow.getId()] = rollupRow = {subRows: [], groups: {}}
+                rollupRows[parentRow.getId()] = rollupRow = {
+                    subRows: [],
+                    groups: {}
+                };
             }
 
             subRowParents[subRow.getId()] = parentRow;
@@ -830,13 +833,13 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     },
 
     doRepaintSubCells: function(me, rowId) {
-        console.info('%s.doRepaintSubCells(%o)', this.getId(), rowId);
-
         var rollupRow = me.rollupRows[rowId],
             groups = rollupRow.groups,
             subCellTpl = me.getSubCellTpl(),
             subCellRenderer = me.getSubCellRenderer(),
             subRowId, columns, columnId, group, cellEl, rendered, dirty;
+
+        console.info('%s.doRepaintSubCells(%o)', this.getId(), rowId);
 
         if (!subCellTpl && !subCellRenderer) {
             return;
