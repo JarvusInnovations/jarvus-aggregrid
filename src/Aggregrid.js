@@ -109,7 +109,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         '<tpl for=".">',
         '    <tr class="jarvus-aggregrid-row <tpl if="$expandable">is-expandable</tpl>" data-row-id="{$id}">',
         '        <tpl for="$columns">',
-        '            <td class="jarvus-aggregrid-cell {cls}" data-column-id="{$id}">{text}</td>',
+        '            <td class="jarvus-aggregrid-cell {$cls}" data-column-id="{$id}">{text}</td>',
         '        </tpl>',
         '    </tr>',
 
