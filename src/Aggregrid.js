@@ -397,7 +397,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         me.fireEvent('rowheaderclick', this, rowId, el, ev);
 
-        if (me.getExpandable()) {
+        if (me.isRowExpandable(me.getRowsStore().getById(rowId))) {
             isExpand = !me.rowsExpanded[rowId];
             me.fireEventedAction(isExpand ? 'expand' : 'collapse', [me, rowId, el, ev], isExpand ? 'doExpand' : 'doCollapse', me);
         }
