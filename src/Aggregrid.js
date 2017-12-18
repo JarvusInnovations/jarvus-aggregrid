@@ -7,6 +7,7 @@
  * - [X] Continuously add rows
  * - [X] Implement scroll locking
  * - [ ] Continuously update/remove rows without refresh
+ * - [ ] Ensure that refresh firing on data store to to sort/filter handles re-grouping already-grouped records
  */
 Ext.define('Jarvus.aggregrid.Aggregrid', {
     extend: 'Ext.Component',
@@ -157,7 +158,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             listeners = {
                 scope: me,
-                load: 'onRowsStoreLoad',
+                refresh: 'onRowsStoreRefresh',
                 add: 'onRowsStoreAdd',
                 remove: 'onRowsStoreRemove',
                 update: 'onRowsStoreUpdate'
@@ -181,7 +182,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         var me = this,
             listeners = {
                 scope: me,
-                load: 'onDataStoreLoad',
+                refresh: 'onDataStoreRefresh',
                 add: 'onDataStoreAdd',
                 remove: 'onDataStoreRemove',
                 update: 'onDataStoreUpdate'
@@ -250,7 +251,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
 
     // event handlers
-    onRowsStoreLoad: function(rowsStore, rows) {
+    onRowsStoreRefresh: function() {
         this.refreshGrid();
     },
 
@@ -341,8 +342,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         this.refreshGrid();
     },
 
-    onDataStoreLoad: function(dataStore, records) {
-        this.groupRecords(records);
+    onDataStoreRefresh: function(dataStore) {
+        this.regroupRecords(dataStore.getRange());
     },
 
     onDataStoreAdd: function(dataStore, records) {
