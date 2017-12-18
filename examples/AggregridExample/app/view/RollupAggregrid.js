@@ -85,6 +85,7 @@ Ext.define('AggregridExample.view.RollupAggregrid', {
                 return rowRecord.get('year') == year && rowRecord.get('week') == week;
             }));
         },
+        subCellTpl: '{records.length}',
         subCellRenderer: function(group, cellEl, rendered) {
             var records = group.records,
                 absences = records && records.length || 0,
