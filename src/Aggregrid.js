@@ -626,9 +626,13 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         return Ext.apply({
             $id: row.getId(),
             $rowHeaderTpl: this.getRowHeaderTpl(),
-            $expandable: this.getExpandable(),
+            $expandable: this.isRowExpandable(row),
             $columns: columns
         }, row.getData());
+    },
+
+    isRowExpandable: function(row) {
+        return this.getExpandable();
     },
 
     /**
