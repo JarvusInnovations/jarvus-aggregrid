@@ -65,11 +65,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         '            <thead>',
         '                <tr>',
         '                    <tpl for="columns">',
-        '                        <th class="jarvus-aggregrid-colheader" data-column-id="{id}">',
+        '                        <th class="jarvus-aggregrid-colheader" data-column-id="{$id}">',
         '                            <div class="jarvus-aggregrid-header-clip">',
         '                                <a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
         '                                    <span class="jarvus-aggregrid-header-text">',
-        '                                        {% values.columnHeaderTpl.applyOut(values, out) %}',
+        '                                        {% values.$columnHeaderTpl.applyOut(values, out) %}',
         '                                    </span>',
         '                                </a>',
         '                            </div>',
@@ -86,17 +86,17 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     headerRowsTpl: [
         '<tpl for=".">',
-        '    <tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
+        '    <tr class="jarvus-aggregrid-row <tpl if="$expandable">is-expandable</tpl>" data-row-id="{$id}">',
         '        <th class="jarvus-aggregrid-rowheader">',
         '            <div class="jarvus-aggregrid-header-text">',
-        '                {% values.rowHeaderTpl.applyOut(values, out) %}',
+        '                {% values.$rowHeaderTpl.applyOut(values, out) %}',
         '            </div>',
         '        </th>',
         '    </tr>',
 
         // expander infrastructure
-        '    <tpl if="expandable">',
-        '        <tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
+        '    <tpl if="$expandable">',
+        '        <tr class="jarvus-aggregrid-expander" data-row-id="{$id}">',
         '            <td class="jarvus-aggregrid-expander-cell">',
         '                <div class="jarvus-aggregrid-expander-ct"></div>',
         '            </td>',
@@ -107,16 +107,16 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     rowsTpl: [
         '<tpl for=".">',
-        '    <tr class="jarvus-aggregrid-row <tpl if="expandable">is-expandable</tpl>" data-row-id="{id}">',
-        '        <tpl for="columns">',
-        '            <td class="jarvus-aggregrid-cell {cls}" data-column-id="{id}">{text}</td>',
+        '    <tr class="jarvus-aggregrid-row <tpl if="$expandable">is-expandable</tpl>" data-row-id="{$id}">',
+        '        <tpl for="$columns">',
+        '            <td class="jarvus-aggregrid-cell {cls}" data-column-id="{$id}">{text}</td>',
         '        </tpl>',
         '    </tr>',
 
         // expander infrastructure
-        '    <tpl if="expandable">',
-        '        <tr class="jarvus-aggregrid-expander" data-row-id="{id}">',
-        '            <td class="jarvus-aggregrid-expander-cell" colspan="{columns.length}">',
+        '    <tpl if="$expandable">',
+        '        <tr class="jarvus-aggregrid-expander" data-row-id="{$id}">',
+        '            <td class="jarvus-aggregrid-expander-cell" colspan="{$columns.length}">',
         '                <div class="jarvus-aggregrid-expander-ct"></div>',
         '            </td>',
         '        </tr>',
@@ -617,15 +617,17 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
     buildColumnTplData: function(column) {
         return Ext.apply({
-            columnHeaderTpl: this.getColumnHeaderTpl()
+            $id: column.getId(),
+            $columnHeaderTpl: this.getColumnHeaderTpl()
         }, column.getData());
     },
 
     buildRowTplData: function(row, columns) {
         return Ext.apply({
-            rowHeaderTpl: this.getRowHeaderTpl(),
-            expandable: this.getExpandable(),
-            columns: columns
+            $id: row.getId(),
+            $rowHeaderTpl: this.getRowHeaderTpl(),
+            $expandable: this.getExpandable(),
+            $columns: columns
         }, row.getData());
     },
 
