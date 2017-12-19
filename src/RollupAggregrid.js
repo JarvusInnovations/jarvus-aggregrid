@@ -28,8 +28,8 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
         parentRowMapper: 'parent_row_id',
         subRowMapper: 'sub_row_id',
 
-        subRowHeaderField: 'title',
-        subRowHeaderTpl: false,
+        subRowHeaderField: null,
+        subRowHeaderTpl: null,
 
         subCellTpl: null,
         subCellRenderer: null,
