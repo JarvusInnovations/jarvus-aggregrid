@@ -161,7 +161,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 refresh: 'onRowsStoreRefresh',
                 add: 'onRowsStoreAdd',
                 remove: 'onRowsStoreRemove',
-                update: 'onRowsStoreUpdate'
+                update: 'onRowsStoreUpdate',
+                clear: 'onRowsStoreClear'
             };
 
         if (oldStore) {
@@ -185,7 +186,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 refresh: 'onDataStoreRefresh',
                 add: 'onDataStoreAdd',
                 remove: 'onDataStoreRemove',
-                update: 'onDataStoreUpdate'
+                update: 'onDataStoreUpdate',
+                clear: 'onDataStoreClear'
             };
 
         if (oldStore) {
@@ -342,6 +344,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         this.refreshGrid();
     },
 
+    onRowsStoreClear: function() {
+        this.groups = null;
+        this.gridPainted = false;
+    },
+
     onDataStoreRefresh: function(dataStore) {
         this.regroupRecords(dataStore.getRange());
     },
@@ -357,6 +364,10 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     onDataStoreUpdate: function(dataStore, records) {
         this.regroupRecords([records], false);
         this.invalidateRecordGroups([records]);
+    },
+
+    onDataStoreClear: function() {
+        this.groupedRecords = null;
     },
 
     onClick: function(ev, target) {
