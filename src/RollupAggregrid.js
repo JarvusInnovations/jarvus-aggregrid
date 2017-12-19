@@ -428,17 +428,14 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
     buildExpanderTplData: function(rowId) {
         var me = this,
             rollupRows = me.rollupRows = me.rollupRows || (me.rollupRows = {}),
-            rowHeaderTpl = me.getSubRowHeaderTpl() || me.getRowHeaderTpl(),
 
             columnsStore = me.getColumnsStore(),
             columnsCount = columnsStore.getCount(),
             columnIndex = 0,
-            column,
 
             subRows = rollupRows[rowId].subRows,
             subRowsCount = subRows.length,
             subRowIndex = 0,
-            subRow,
 
             data = {},
             columnsData = data.columns = [],
@@ -446,22 +443,22 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
         // generate columns and rows render data
         for (; columnIndex < columnsCount; columnIndex++) {
-            column = columnsStore.getAt(columnIndex);
-            columnsData.push(Ext.apply({
-                $id: column.getId()
-            }, column.getData()));
+            columnsData.push(me.buildColumnTplData(columnsStore.getAt(columnIndex)));
         }
 
         for (; subRowIndex < subRowsCount; subRowIndex++) {
-            subRow = subRows[subRowIndex];
-            subRowsData.push(Ext.apply({
-                $id: subRow.getId(),
-                $rowHeaderTpl: rowHeaderTpl,
-                $columns: columnsData
-            }, subRow.getData()));
+            subRowsData.push(me.buildSubRowTplData(subRows[subRowIndex], columnsData));
         }
 
         return data;
+    },
+
+    buildSubRowTplData: function(row, columns) {
+        return Ext.apply({
+            $id: row.getId(),
+            $rowHeaderTpl: this.getSubRowHeaderTpl() || this.getRowHeaderTpl(),
+            $columns: columns
+        }, row.getData());
     },
 
     mapSubRows: function(subRows, repaint) {
