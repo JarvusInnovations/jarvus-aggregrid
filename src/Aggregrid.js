@@ -58,8 +58,9 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         '<div class="jarvus-aggregrid-scroller">',
         '    <div class="jarvus-aggregrid-data-ct">',
-        '        <div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-left"></div>',
-        '        <div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-right"></div>',
+        // TODO: hide/show dynamically based on scroll position and wire clicking
+        // '        <div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-left"></div>',
+        // '        <div tabindex="0" class="jarvus-aggregrid-scroll-control is-disabled scroll-right"></div>',
 
         '        <table class="jarvus-aggregrid-data-table">',
         '            <thead>',
