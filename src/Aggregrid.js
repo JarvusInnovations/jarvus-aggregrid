@@ -258,7 +258,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         this.refreshGrid();
     },
 
-    onRowsStoreAdd: function(rowsStore, rows) {
+    onRowsStoreAdd: function(rowsStore, rows, index) {
         var me = this,
             expandable = me.getExpandable(),
             rendered = me.rendered,
@@ -272,7 +272,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
             headerRowsTpl = me.lookupTpl('headerRowsTpl'),
             rowsTpl = me.lookupTpl('rowsTpl'),
-            rowsLength = rows.length, rowIndex, row, rowId, rowGroups, rowEl,
+            rowsLength = rows.length, rowIndex, previousRowId, row, rowId, rowGroups, rowEl,
             rowsTplData = [],
             renderedRowIds = [],
 
@@ -287,8 +287,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 rowsTplData.push(me.buildRowTplData(rows[rowIndex], columnsData));
             }
 
-            headerRowsTpl.append(rowHeadersCt, rowsTplData);
-            rowsTpl.append(dataCellsCt, rowsTplData);
+            if (index == 0) {
+                headerRowsTpl.insertFirst(rowHeadersCt, rowsTplData);
+                rowsTpl.insertFirst(dataCellsCt, rowsTplData);
+            } else {
+                previousRowId = rowsStore.getAt(index-1).getId();
+                headerRowsTpl.insertAfter(headerRowEls[previousRowId], rowsTplData);
+                rowsTpl.insertAfter(rowEls[previousRowId], rowsTplData);
+            }
         }
 
         // READ phase: query DOM to collect references to key elements
