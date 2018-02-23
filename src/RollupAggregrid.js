@@ -177,6 +177,7 @@ Ext.define('Jarvus.aggregrid.RollupAggregrid', {
 
     onSubRowsStoreAdd: function(subRowsStore, subRows) {
         this.mapSubRows(subRows);
+        this.refreshGrid(); // TODO: support incremental update
     },
 
     onSubRowsStoreRemove: function(subRowsStore, subRows) {
