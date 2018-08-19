@@ -69,7 +69,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '<tpl for="columns">',
                                 '<th class="jarvus-aggregrid-colheader" data-column-id="{$id}">',
                                     '<div class="jarvus-aggregrid-header-clip">',
-                                        '<a class="jarvus-aggregrid-header-link" href="{% values.$columnHeaderLinkTpl.applyOut(values, out) %}">',
+                                        '<a class="jarvus-aggregrid-header-link" href="{% values.$columnHeaderLinkTpl.applyOut(values, out) %}" target="_blank">',
                                             '<span class="jarvus-aggregrid-header-text">',
                                                 '{% values.$columnHeaderTpl.applyOut(values, out) %}',
                                             '</span>',
