@@ -21,6 +21,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         columnHeaderField: 'title',
         columnHeaderTpl: false,
+        columnHeaderLinkTpl: '#',
         columnMapper: 'column_id',
 
         rowHeaderField: 'title',
@@ -68,7 +69,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                             '<tpl for="columns">',
                                 '<th class="jarvus-aggregrid-colheader" data-column-id="{$id}">',
                                     '<div class="jarvus-aggregrid-header-clip">',
-                                        '<a class="jarvus-aggregrid-header-link" href="javascript:void(0)">',
+                                        '<a class="jarvus-aggregrid-header-link" href="{% values.$columnHeaderLinkTpl.applyOut(values, out) %}">',
                                             '<span class="jarvus-aggregrid-header-text">',
                                                 '{% values.$columnHeaderTpl.applyOut(values, out) %}',
                                             '</span>',
@@ -206,6 +207,14 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 '{[typeof values === "string" ? values : values["' + this.getColumnHeaderField() + '"]]}'
             );
         } else if (!tpl.isTemplate) {
+            tpl = new Ext.XTemplate(tpl);
+        }
+
+        return tpl;
+    },
+
+    applyColumnHeaderLinkTpl: function(tpl) {
+        if (!tpl.isTemplate) {
             tpl = new Ext.XTemplate(tpl);
         }
 
@@ -390,6 +399,11 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         if (target = ev.getTarget('.jarvus-aggregrid-colheader', containerEl, true)) { // eslint-disable-line no-cond-assign
+            // cancel navigation to dummy anchor
+            if (ev.getTarget('a[href="#"]')) {
+                ev.preventDefault();
+            }
+
             return me.onColumnHeaderClick(
                 parseInt(target.getAttribute('data-column-id'), 10),
                 target,
@@ -638,7 +652,8 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     buildColumnTplData: function(column) {
         return Ext.apply({
             $id: column.getId(),
-            $columnHeaderTpl: this.getColumnHeaderTpl()
+            $columnHeaderTpl: this.getColumnHeaderTpl(),
+            $columnHeaderLinkTpl: this.getColumnHeaderLinkTpl()
         }, column.getData());
     },
 
