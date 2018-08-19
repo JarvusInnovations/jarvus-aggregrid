@@ -21,7 +21,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
 
         columnHeaderField: 'title',
         columnHeaderTpl: false,
-        columnHeaderLinkTpl: '#',
+        columnHeaderLinkTpl: '{$href:defaultValue("#")}',
         columnMapper: 'column_id',
 
         rowHeaderField: 'title',
