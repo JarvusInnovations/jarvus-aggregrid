@@ -6,6 +6,7 @@
  * - [X] Continuously update data cell renderings
  * - [X] Continuously add rows
  * - [X] Implement scroll locking
+ * - [ ] Process data changes immediately and serially, only buffer UI updates
  * - [ ] Continuously update/remove rows without refresh
  * - [ ] Ensure that refresh firing on data store to to sort/filter handles re-grouping already-grouped records
  */
@@ -363,6 +364,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     onRowsStoreClear: function() {
         this.groups = null;
         this.gridPainted = false;
+        this.refreshGrid();
     },
 
     onDataStoreRefresh: function(dataStore) {
