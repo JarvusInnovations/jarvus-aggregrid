@@ -190,6 +190,7 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
                 add: 'onDataStoreAdd',
                 remove: 'onDataStoreRemove',
                 update: 'onDataStoreUpdate',
+                idchanged: 'onDataStoreIdChanged',
                 clear: 'onDataStoreClear'
             };
 
@@ -382,6 +383,13 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
     onDataStoreUpdate: function(dataStore, records) {
         this.regroupRecords([records], false);
         this.invalidateRecordGroups([records]);
+    },
+
+    onDataStoreIdChanged: function(dataStore, record, oldId, newId) {
+        var groupedRecords = this.groupedRecords;
+
+        groupedRecords[newId] = groupedRecords[oldId];
+        delete groupedRecords[oldId];
     },
 
     onDataStoreClear: function() {
