@@ -995,6 +995,32 @@ Ext.define('Jarvus.aggregrid.Aggregrid', {
         }
 
         me.cellsPainted = true;
+        me.doLayoutPoke();
+    },
+
+    doLayoutPoke: function () {
+        // do some dumb bad user agent sniffing to poke chrome on windows and android
+        // to attempt to get it to properly render borders
+
+        var me = this,
+            ua = navigator.userAgent,
+            table,
+            opacityCache;
+
+        if (!ua.includes('Chrome')) {
+            // not chrome, abort
+            return;
+        }
+
+        if (ua.includes('Windows') || ua.includes('Linux')) {
+            // poke
+            table = me.el.down('.jarvus-aggregrid-data-table');
+            opacityCache = table.dom.style.opacity;
+            table.dom.style.opacity = 0.99;
+            setTimeout(function () {
+                table.dom.style.opacity = opacityCache;
+            }, 0);
+        }
     },
 
     doExpand: function(me, rowId) {
